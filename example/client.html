@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+  <script src="bonsai.js"></script>
+</head>
+<body style="background-color:black;">
+  <div id="player"></div>
+  <script>
+    var playerNode = document.getElementById('player');
+    var SocketIoRunnerContext = function(runnerUrl) {
+      this.socket = io.connect(runnerUrl);
+    };
+    var proto = SocketIoRunnerContext.prototype = bonsai.tools.mixin({
+      init: function() {
+        var runnerContext = this;
+        this.socket.on('message', function(msg) {
+          runnerContext.emit('message', msg[0]);
+        });
+      },
+      notify: function(message) {
+        this.socket.emit('message', message);
+      },
+      notifyRunner: function(message) {
+        this.socket.emit('message', message);
+      },
+      run: function(code) {
+            this.notifyRunner({
+              command: 'runScript',
+              code: code
+            });
+          }
+    }, bonsai.EventEmitter);
+
+    proto.notifyRunnerAsync = proto.notifyRunner;
+
+    bonsai.setup({
+      runnerContext: SocketIoRunnerContext,
+      runnerUrl: 'http://localhost:3000'
+    }).run(playerNode, {
+      width: 600,
+      height: 600
+    });
+
+  </script>
+</body>
+</html>

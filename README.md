@@ -9,7 +9,13 @@ This package provides a [socket.io][]-based server that is capable to play [bons
 How-To
 ------
 
-Nothing here yet
+~~~ bash
+git clone git@github.com:uxebu/bonsai-server.git
+cd bonsai-server
+npm install
+node index.js &
+open example/client.html
+~~~
 
 
 Upcoming Features

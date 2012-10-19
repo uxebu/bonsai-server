@@ -10,6 +10,10 @@
     "type": "git",
     "url": "git://github.com/uxebu/bonsai-server.git"
   },
+  "dependencies": {
+    "bonsai": "git+ssh://git@github.com:uxebu/bikeshed.git",
+    "socket.io": "~0.9.10"
+  },
   "keywords": [
     "bonsai",
     "socket.io",
