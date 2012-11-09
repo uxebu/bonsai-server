@@ -1,17 +1,18 @@
 {
   "name": "bonsai-server",
-  "version": "0.0.0",
+  "version": "0.0.0-4",
   "description": "A socket.io-based server for bonsai movies.",
   "main": "index.js",
   "scripts": {
-    "test": ""
+    "test": "",
+    "start": "index.js"
   },
   "repository": {
     "type": "git",
     "url": "git://github.com/uxebu/bonsai-server.git"
   },
   "dependencies": {
-    "bonsai": "git+ssh://git@github.com:uxebu/bonsai.git",
+    "bonsai": "git+https://github.com/uxebu/bonsai.git",
     "socket.io": "~0.9.10"
   },
   "keywords": [
@@ -19,5 +20,9 @@
     "socket.io",
     "server"
   ],
-  "author": "uxebu Inc. (http://uxebu.com)"
+  "author": "uxebu Inc. (http://uxebu.com)",
+  "subdomain": "nonken.bonsai-server",
+  "engines": {
+    "node": "0.8.x"
+  }
 }

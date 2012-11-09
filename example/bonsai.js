@@ -1,4 +1,4 @@
-(function() {
+(function __bonsaiRunnerCode__() {
   var module$bootstrapper$context$script_loader = {module$exports:function(a) {
     return{isLoading:!1, isWaiting:0, waitingCallbacks:[], queue:[], load:function(b, c) {
       var d = this, e = this.queue, f = this.waitingCallbacks;
@@ -61,7 +61,6 @@
     return new Point$$module$point(this.x, this.y)
   };
   proto$$module$point.normalize = function(a) {
-    sqrt$$module$point(this.x * this.x + this.y * this.y);
     a /= this.length;
     this.x *= a;
     this.y *= a;
@@ -99,6 +98,9 @@
   proto$$module$point.distance = function(a) {
     var b = this.x - a.x, a = this.y - a.y;
     return sqrt$$module$point(b * b + a * a)
+  };
+  proto$$module$point.angle = function(a) {
+    return Math.atan2(this.y - a.y, this.x - a.x)
   };
   Point$$module$point.interpolate = function(a, b, c) {
     return new Point$$module$point(a.x + c * (a.x - b.x), a.y + c * (a.y - b.y))
@@ -142,20 +144,6 @@
   }()};
   module$renderer$svg$svg_helper.module$exports = helpers$$module$renderer$svg$svg_helper;
   module$renderer$svg$svg_helper.module$exports && (module$renderer$svg$svg_helper = module$renderer$svg$svg_helper.module$exports);
-  var module$runner$animation$corner_radius_translations = {module$exports:{cornerRadius:{setup:function(a) {
-    var b = a.cornerRadius, b = b || 0;
-    a.cornerRadius0 = b[0] || b;
-    a.cornerRadius1 = b[1] || b;
-    a.cornerRadius2 = b[2] || b;
-    a.cornerRadius3 = b[3] || b
-  }, step:function(a) {
-    a.cornerRadius = [a.cornerRadius0, a.cornerRadius1, a.cornerRadius2, a.cornerRadius3];
-    delete a.cornerRadius0;
-    delete a.cornerRadius1;
-    delete a.cornerRadius2;
-    delete a.cornerRadius3
-  }}}};
-  module$runner$animation$corner_radius_translations.module$exports && (module$runner$animation$corner_radius_translations = module$runner$animation$corner_radius_translations.module$exports);
   var module$runner$animation$easing = {}, easingFuncs$$module$runner$animation$easing = {linear:function(a) {
     return a
   }, quadIn:function(a) {
@@ -259,6 +247,30 @@
   }};
   module$runner$animation$easing.module$exports = easingFuncs$$module$runner$animation$easing;
   module$runner$animation$easing.module$exports && (module$runner$animation$easing = module$runner$animation$easing.module$exports);
+  var module$runner$animation$property_tween = {};
+  function PropertyTween$$module$runner$animation$property_tween(a, b, c) {
+    this.translationData = {};
+    this.numericStartValues = c ? c.toNumeric.call(this.translationData, a, !1) : [a];
+    this.numericEndValues = c ? c.toNumeric.call(this.translationData, b, !0) : [b];
+    this.length = this.numericStartValues.length;
+    this.translator = c
+  }
+  PropertyTween$$module$runner$animation$property_tween.prototype.at = function(a) {
+    for(var b = this.numericStartValues, c = this.numericEndValues, d = [], e = 0, f = this.length;e < f;++e) {
+      var g = b[e];
+      d[e] = g + (c[e] - g) * a
+    }
+    return this.translator ? this.translator.toAttr.call(this.translationData, d) : d[0]
+  };
+  module$runner$animation$property_tween.module$exports = PropertyTween$$module$runner$animation$property_tween;
+  module$runner$animation$property_tween.module$exports && (module$runner$animation$property_tween = module$runner$animation$property_tween.module$exports);
+  var module$runner$animation$translators$corner_radius = {module$exports:{cornerRadius:{toNumeric:function(a) {
+    a = a || 0;
+    return[a[0] || a, a[1] || a, a[2] || a, a[3] || a]
+  }, toAttr:function(a) {
+    return a
+  }}}};
+  module$runner$animation$translators$corner_radius.module$exports && (module$runner$animation$translators$corner_radius = module$runner$animation$translators$corner_radius.module$exports);
   var module$runner$filter$base_filter = {}, filter$$module$runner$filter$base_filter = {BaseFilter:function(a, b, c) {
     this.type = a;
     this.value = "undefined" == typeof b ? c : b
@@ -270,98 +282,6 @@
   }};
   module$runner$filter$base_filter.module$exports = filter$$module$runner$filter$base_filter;
   module$runner$filter$base_filter.module$exports && (module$runner$filter$base_filter = module$runner$filter$base_filter.module$exports);
-  var module$runner$matrix = {}, Point$$module$runner$matrix = module$point, cos$$module$runner$matrix = Math.cos, sin$$module$runner$matrix = Math.sin;
-  function Matrix$$module$runner$matrix(a, b, c, d, e, f) {
-    this.a = null != a ? a : 1;
-    this.b = b || 0;
-    this.c = c || 0;
-    this.d = null != d ? d : 1;
-    this.tx = e || 0;
-    this.ty = f || 0
-  }
-  Matrix$$module$runner$matrix.prototype = {clone:function() {
-    return new Matrix$$module$runner$matrix(this.a, this.b, this.c, this.d, this.tx, this.ty)
-  }, concat:function(a) {
-    var b = this.a, c = this.b, d = this.c, e = this.d, f = this.tx, g = this.ty;
-    this.a = b * a.a + c * a.c;
-    this.b = b * a.b + c * a.d;
-    this.c = d * a.a + e * a.c;
-    this.d = d * a.b + e * a.d;
-    this.tx = f * a.a + g * a.c + a.tx;
-    this.ty = f * a.b + g * a.d + a.ty;
-    return this
-  }, createBox:function(a, b, c, d, e) {
-    return this.identify().rotate(c).scale(a, b).translate(d, e)
-  }, deltaTransformPoint:function(a) {
-    return new Point$$module$runner$matrix(this.a * a.x + this.c * a.y, this.b * a.x + this.d * a.y)
-  }, identify:function() {
-    this.a = this.d = 1;
-    this.b = this.c = this.tx = this.ty = 0;
-    return this
-  }, invert:function() {
-    var a = this.a * this.d - this.b * this.c, b = this.a, c = this.b, d = this.c, e = this.d, f = this.tx, g = this.ty;
-    this.a = e / a;
-    this.b = -c / a;
-    this.c = -d / a;
-    this.d = b / a;
-    this.tx = (d * g - e * f) / a;
-    this.ty = (c * f - b * g) / a;
-    return this
-  }, rotate:function(a) {
-    var b = cos$$module$runner$matrix(a), a = sin$$module$runner$matrix(a);
-    return this.concat(new Matrix$$module$runner$matrix(b, a, -a, b, 0, 0))
-  }, scale:function(a, b) {
-    this.a *= a;
-    this.b *= b;
-    this.c *= a;
-    this.d *= b;
-    this.tx *= a;
-    this.ty *= b;
-    return this
-  }, transformPoint:function(a) {
-    return new Point$$module$runner$matrix(this.a * a.x + this.c * a.y + this.tx, this.b * a.x + this.d * a.y + this.ty)
-  }, translate:function(a, b) {
-    this.tx += a;
-    this.ty += b;
-    return this
-  }};
-  module$runner$matrix.module$exports = Matrix$$module$runner$matrix;
-  module$runner$matrix.module$exports && (module$runner$matrix = module$runner$matrix.module$exports);
-  var module$runner$animation$matrix_translations = {}, Matrix$$module$runner$animation$matrix_translations = module$runner$matrix;
-  module$runner$animation$matrix_translations.module$exports = {matrix:{setupTo:function(a) {
-    var b = a.matrix;
-    a.matrix_a = b.a;
-    a.matrix_b = b.b;
-    a.matrix_c = b.c;
-    a.matrix_d = b.d;
-    a.matrix_tx = b.tx;
-    a.matrix_ty = b.ty;
-    this.animatedMatrix = new Matrix$$module$runner$animation$matrix_translations
-  }, setupFrom:function(a) {
-    var b = a.matrix;
-    a.matrix_a = b.a;
-    a.matrix_b = b.b;
-    a.matrix_c = b.c;
-    a.matrix_d = b.d;
-    a.matrix_tx = b.tx;
-    a.matrix_ty = b.ty;
-    delete a.matrix
-  }, step:function(a) {
-    a.matrix = this.animatedMatrix;
-    a.matrix.a = a.matrix_a;
-    a.matrix.b = a.matrix_b;
-    a.matrix.c = a.matrix_c;
-    a.matrix.d = a.matrix_d;
-    a.matrix.tx = a.matrix_tx;
-    a.matrix.ty = a.matrix_ty;
-    delete a.matrix_a;
-    delete a.matrix_b;
-    delete a.matrix_c;
-    delete a.matrix_d;
-    delete a.matrix_tx;
-    delete a.matrix_ty
-  }}};
-  module$runner$animation$matrix_translations.module$exports && (module$runner$animation$matrix_translations = module$runner$animation$matrix_translations.module$exports);
   var module$runner$registry = {};
   function MovieRegistry$$module$runner$registry() {
     var a = this.movies = [];
@@ -582,7 +502,7 @@
   }};
   module$tools.module$exports = tools$$module$tools;
   module$tools.module$exports && (module$tools = module$tools.module$exports);
-  var module$color = {}, tools$$module$color = module$tools, colorMap$$module$color = module$color_map, abs$$module$color = Math.abs, max$$module$color = Math.max, min$$module$color = Math.min, rand$$module$color = Math.random, round$$module$color = Math.round;
+  var module$color = {}, tools$$module$color = module$tools, colorMap$$module$color = module$color_map, max$$module$color = Math.max, min$$module$color = Math.min, rand$$module$color = Math.random, round$$module$color = Math.round;
   function color$$module$color(a, b) {
     a = color$$module$color.parse(a, b);
     return null === a ? a : new RGBAColor$$module$color(a >> 24 & 255, a >> 16 & 255, a >> 8 & 255, (a >> 0 & 255) / 255)
@@ -632,10 +552,7 @@
       case "s":
       ;
       case "l":
-        if(1 < b || 0 > b) {
-          throw Error("Property: " + a + " must be from 0 to 1");
-        }
-        d[a] = b;
+        d[a] = max$$module$color(0, min$$module$color(1, b));
         c = hslToRgb$$module$color(d.h, d.s, d.l);
         d.r = c >> 24 & 255;
         d.g = c >> 16 & 255;
@@ -791,7 +708,7 @@
           c = 255;
         case "rgba":
           if(4 == e || 3 == e && c) {
-            return((d[0] & 255) << 24 | (d[1] & 255) << 16 | (d[2] & 255) << 8 | (c || 255 * d[3] & 255)) >>> 0
+            return((d[0] & 255) << 24 | (d[1] & 255) << 16 | (d[2] & 255) << 8 | (c || 255 * min$$module$color(1, max$$module$color(0, d[3])) & 255)) >>> 0
           }
           break;
         case "hsl":
@@ -903,36 +820,82 @@
   }}, EventEmitter$$module$message_channel);
   module$message_channel.module$exports = MessageChannel$$module$message_channel;
   module$message_channel.module$exports && (module$message_channel = module$message_channel.module$exports);
-  var module$renderer$svg$svg_event_handlers = {}, tools$$module$renderer$svg$svg_event_handlers = module$tools, TOUCH_SUPPORT$$module$renderer$svg$svg_event_handlers = "undefined" == typeof document ? !1 : "createTouch" in document;
+  var module$bootstrapper$context$iframe$context = {}, MessageChannel$$module$bootstrapper$context$iframe$context = module$message_channel, EventEmitter$$module$bootstrapper$context$iframe$context = module$event_emitter, tools$$module$bootstrapper$context$iframe$context = module$tools;
+  function IFrameContext$$module$bootstrapper$context$iframe$context(a, b) {
+    this.runnerUrl = a;
+    this.doc = b
+  }
+  IFrameContext$$module$bootstrapper$context$iframe$context.prototype = tools$$module$bootstrapper$context$iframe$context.mixin({MessageChannel:MessageChannel$$module$bootstrapper$context$iframe$context, destroy:function() {
+    this.notifyRunner({command:"freeze"});
+    this.messageChannel.destroy();
+    delete this.messageChannel;
+    this.removeAllListeners();
+    var a = this.frame;
+    a.contentDocument.documentElement.innerHTML = "";
+    a.parentNode.removeChild(a);
+    delete this.frame
+  }, init:function(a) {
+    var b = this.doc || document, c = this.frame = b.createElement("iframe");
+    (b.body || b.documentElement).appendChild(c);
+    c.style.display = "none";
+    b = this.frameWindow = c.contentWindow;
+    c = this.frameDocument = c.contentDocument;
+    c.open();
+    this.messageChannel = b.messageChannel = new this.MessageChannel(tools$$module$bootstrapper$context$iframe$context.hitch(this, this.notify), function() {
+    });
+    b.options = a;
+    b.isBonsaiMovie = !0;
+    var d = this;
+    this.messageChannel.on("message", function(a) {
+      "scriptLoaded" === a.command && d.emit("scriptLoaded", a.url)
+    });
+    -1 < this.runnerUrl.indexOf("function __bonsaiRunnerCode__") ? (a = this.runnerUrl.substring(this.runnerUrl.indexOf("{") + 1, this.runnerUrl.lastIndexOf("}")), c.write("<script>" + a + "<\/script>")) : c.write('<script src="' + this.runnerUrl + '"><\/script>');
+    c.close();
+    this.doc = this.init = null;
+    return this
+  }, notify:function(a) {
+    this.emit("message", a)
+  }, notifyRunner:function(a) {
+    this.messageChannel.notify(a)
+  }, notifyRunnerAsync:function(a) {
+    setTimeout(tools$$module$bootstrapper$context$iframe$context.hitch(this, this.notifyRunner, a), 1)
+  }, run:function(a) {
+    this.notifyRunner({command:"runScript", code:a})
+  }, load:function(a) {
+    this.notifyRunner({command:"loadScript", url:a})
+  }}, EventEmitter$$module$bootstrapper$context$iframe$context);
+  module$bootstrapper$context$iframe$context.module$exports = IFrameContext$$module$bootstrapper$context$iframe$context;
+  module$bootstrapper$context$iframe$context.module$exports && (module$bootstrapper$context$iframe$context = module$bootstrapper$context$iframe$context.module$exports);
+  var module$renderer$svg$svg_event_handlers = {}, tools$$module$renderer$svg$svg_event_handlers = module$tools, TOUCH_SUPPORT$$module$renderer$svg$svg_event_handlers = "undefined" == typeof document ? !1 : "createTouch" in document, rMultiEvent$$module$renderer$svg$svg_event_handlers = /drag|pointerup|pointerdown|pointermove/, rPointerEvent$$module$renderer$svg$svg_event_handlers = /click|pointer/;
   function cloneBasicEvent$$module$renderer$svg$svg_event_handlers(a) {
     return tools$$module$renderer$svg$svg_event_handlers.mixin({}, a)
   }
   module$renderer$svg$svg_event_handlers.module$exports = {handleSingleTouch:function(a, b, c) {
-    var d = this._getBasicEventData(a), e = d.clientX, f = d.clientY, c = c ? "multi:" : "", g = this._getTarget(a), h = this._getIdOfTarget(g), j = a.type, i = document.elementFromPoint(a.pageX, a.pageY), k = i ? this._getIdOfTarget(i) : 0;
+    var d = this._getBasicEventData(a), e = d.clientX, f = d.clientY, g = c ? "multi:" : "", h = this._getTarget(a), j = this._getIdOfTarget(h), i = a.type, k = document.elementFromPoint(a.pageX, a.pageY), l = k ? this._getIdOfTarget(k) : 0;
     d.touchId = a.identifier;
     d.touchIndex = a.index;
-    switch(j) {
+    switch(i) {
       case "touchstart":
         b.startX = e;
         b.startY = f;
         d = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(d);
-        d.type = c + "pointerdown";
-        this.emit("userevent", d, h);
+        d.type = g + "pointerdown";
+        this.emit("userevent", d, j);
         break;
       case "touchmove":
         d.diffX = e - b.startX;
         d.diffY = f - b.startY;
         b.touchMoveHappened = !0;
         d = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(d);
-        d.type = c + "drag";
-        this.emit("userevent", d, h);
+        d.type = g + "drag";
+        this.emit("userevent", d, j);
         d = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(d);
-        d.type = c + "pointermove";
-        this.emit("userevent", d, k);
+        d.type = g + "pointermove";
+        this.emit("userevent", d, l);
         break;
       case "touchend":
-        if(d = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(d), d.type = c + "pointerup", this.emit("userevent", d, h), g !== i && (d = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(d), this.emit("userevent", d, k)), !b.touchMoveHappened) {
-          d = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(d), d.type = "click", this.emit("userevent", d, h)
+        if(d = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(d), d.type = g + "pointerup", this.emit("userevent", d, j), h !== k && (d = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(d), this.emit("userevent", d, l)), !c && !b.touchMoveHappened) {
+          d = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(d), d.type = "click", this.emit("userevent", d, j)
         }
     }
   }, handleTouchEvent:function(a) {
@@ -1018,8 +981,9 @@
       }
       this._lastEventPos = [f, g];
       e.type = d;
+      rPointerEvent$$module$renderer$svg$svg_event_handlers.test(d) && (e.isRight = a.which ? 3 === a.which : 2 === a.button, e.isMiddle = a.which ? 2 === a.which : 4 === a.button, e.isLeft = a.which ? 1 === a.which : 1 === a.button || 0 === a.button);
       this.emit("userevent", e, c);
-      !TOUCH_SUPPORT$$module$renderer$svg$svg_event_handlers && /drag|pointerup|pointerdown|pointermove/.test(d) && (e = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(e), e.type = "multi:" + d, this.emit("userevent", e, c))
+      !TOUCH_SUPPORT$$module$renderer$svg$svg_event_handlers && rMultiEvent$$module$renderer$svg$svg_event_handlers.test(d) && (e = cloneBasicEvent$$module$renderer$svg$svg_event_handlers(e), e.type = "multi:" + d, this.emit("userevent", e, c))
     }
   }, _getTarget:function(a) {
     for(a = a.target;a && null == this._getIdOfTarget(a);) {
@@ -1143,72 +1107,59 @@
   }, containsFlattenFilter:containsFlattenFilter$$module$renderer$svg$svg_filters, filterElementsFromList:filterElementsFromList$$module$renderer$svg$svg_filters, isFEColorMatrixEnabled:isFEColorMatrixEnabled$$module$renderer$svg$svg_filters};
   module$renderer$svg$svg_filters.module$exports = svgFilters$$module$renderer$svg$svg_filters;
   module$renderer$svg$svg_filters.module$exports && (module$renderer$svg$svg_filters = module$renderer$svg$svg_filters.module$exports);
-  var module$runner$animation$color_translations = {}, color$$module$runner$animation$color_translations = module$color;
-  module$runner$animation$color_translations.module$exports = {strokeColor:makeColorTranslationSpec$$module$runner$animation$color_translations("strokeColor"), fillColor:makeColorTranslationSpec$$module$runner$animation$color_translations("fillColor")};
-  function makeColorTranslationSpec$$module$runner$animation$color_translations(a) {
-    return{setup:function(b) {
-      var c = color$$module$runner$animation$color_translations(b[a]);
-      b[a + "_r"] = c.r();
-      b[a + "_g"] = c.g();
-      b[a + "_b"] = c.b();
-      b[a + "_a"] = c.a();
-      delete b[a]
-    }, step:function(b) {
-      b[a] = "" + new color$$module$runner$animation$color_translations.RGBAColor(b[a + "_r"], b[a + "_g"], b[a + "_b"], b[a + "_a"]);
-      delete b[a + "_r"];
-      delete b[a + "_g"];
-      delete b[a + "_b"];
-      delete b[a + "_a"]
+  var module$runner$animation$translators$color = {}, color$$module$runner$animation$translators$color = module$color;
+  module$runner$animation$translators$color.module$exports = {strokeColor:makeColorTranslationSpec$$module$runner$animation$translators$color("strokeColor"), fillColor:makeColorTranslationSpec$$module$runner$animation$translators$color("fillColor")};
+  function makeColorTranslationSpec$$module$runner$animation$translators$color() {
+    return{toNumeric:function(a) {
+      a = color$$module$runner$animation$translators$color(a);
+      return[a.r(), a.g(), a.b(), a.a()]
+    }, toAttr:function(a) {
+      return"" + new color$$module$runner$animation$translators$color.RGBAColor(a[0], a[1], a[2], a[3])
     }}
   }
-  module$runner$animation$color_translations.module$exports && (module$runner$animation$color_translations = module$runner$animation$color_translations.module$exports);
-  var module$runner$animation$gradient_translations = {}, color$$module$runner$animation$gradient_translations = module$color;
-  function translation$$module$runner$animation$gradient_translations(a) {
-    return{setup:function(b) {
-      var c = b[a].stops, d;
-      this[a] = b[a].clone();
-      b[a].matrix && (b[a + "MatrixA"] = b[a].matrix.a, b[a + "MatrixB"] = b[a].matrix.b, b[a + "MatrixC"] = b[a].matrix.c, b[a + "MatrixD"] = b[a].matrix.d, b[a + "MatrixTX"] = b[a].matrix.tx, b[a + "MatrixTY"] = b[a].matrix.ty);
-      "linear-gradient" === b[a].type ? isNaN(b[a].direction) || (b[a + "Direction"] = b[a].direction) : (this[a + "RadiusUnit"] = (("" + b[a].radius).match(/\D$/) || [""])[0], b[a + "Radius"] = parseFloat(b[a].radius));
-      for(var e = 0, f = c.length;e < f;++e) {
-        d = color$$module$runner$animation$gradient_translations(c[e][0]), b[a + "Stop_" + e + "r"] = d.r(), b[a + "Stop_" + e + "g"] = d.g(), b[a + "Stop_" + e + "b"] = d.b(), b[a + "Stop_" + e + "a"] = d.a(), isNaN(c[e][1]) || (b[a + "Stop_" + e + "_pos"] = c[e][1])
+  module$runner$animation$translators$color.module$exports && (module$runner$animation$translators$color = module$runner$animation$translators$color.module$exports);
+  var module$runner$animation$translators$gradient = {}, color$$module$runner$animation$translators$gradient = module$color;
+  function translation$$module$runner$animation$translators$gradient() {
+    return{toNumeric:function(a) {
+      var b = a.stops, c = [];
+      this.mutableGradient = a.clone();
+      a.matrix && (this.hasMatrix = !0, c.push(a.matrix.a, a.matrix.b, a.matrix.c, a.matrix.d, a.matrix.tx, a.matrix.ty));
+      "linear-gradient" === a.type ? isNaN(a.direction) || (this.hasDirection = !0, c.push(a.direction)) : (this.hasRadius = !0, this.radiusUnit = (("" + a.radius).match(/\D$/) || [""])[0], c.push(parseFloat(a.radius)));
+      for(var d = 0, e = b.length;d < e;++d) {
+        a = color$$module$runner$animation$translators$gradient(b[d][0]), c.push(a.r(), a.g(), a.b(), a.a(), b[d][1])
       }
-      delete b[a]
-    }, step:function(b) {
-      this[a].matrix && (this[a].matrix.a = b[a + "MatrixA"], this[a].matrix.b = b[a + "MatrixB"], this[a].matrix.c = b[a + "MatrixC"], this[a].matrix.d = b[a + "MatrixD"], this[a].matrix.tx = b[a + "MatrixTX"], this[a].matrix.ty = b[a + "MatrixTY"]);
-      "linear-gradient" === this[a].type ? (isNaN(b[a + "Direction"]) || (this[a].direction = b[a + "Direction"]), delete b[a + "Direction"]) : (this[a].radius = b[a + "Radius"] + this[a + "RadiusUnit"], delete b[a + "Radius"]);
-      for(var c = this[a].stops, d = 0, e = c.length;d < e;++d) {
-        c[d][0] = +new color$$module$runner$animation$gradient_translations.RGBAColor(b[a + "Stop_" + d + "r"], b[a + "Stop_" + d + "g"], b[a + "Stop_" + d + "b"], b[a + "Stop_" + d + "a"]), c[d][1] = b[a + "Stop_" + d + "_pos"], delete b[a + "Stop_" + d + "r"], delete b[a + "Stop_" + d + "g"], delete b[a + "Stop_" + d + "b"], delete b[a + "Stop_" + d + "a"], delete b[a + "Stop_" + d + "_pos"]
+      return c
+    }, toAttr:function(a) {
+      var b = this.mutableGradient, c = 0;
+      b.matrix && (b.matrix.a = a[c++], b.matrix.b = a[c++], b.matrix.c = a[c++], b.matrix.d = a[c++], b.matrix.tx = a[c++], b.matrix.ty = a[c++]);
+      this.hasDirection ? b.direction = a[c++] : b.radius = a[c++] + this.radiusUnit;
+      for(var d = b.stops, e = 0, f = d.length;e < f;++e) {
+        d[e][0] = +new color$$module$runner$animation$translators$gradient.RGBAColor(a[c++], a[c++], a[c++], a[c++]), d[e][1] = a[c++]
       }
-      b[a] = this[a]
+      return b
     }}
   }
-  module$runner$animation$gradient_translations.module$exports = {fillGradient:translation$$module$runner$animation$gradient_translations("fillGradient"), strokeGradient:translation$$module$runner$animation$gradient_translations("strokeGradient")};
-  module$runner$animation$gradient_translations.module$exports && (module$runner$animation$gradient_translations = module$runner$animation$gradient_translations.module$exports);
-  var module$runner$animation$segment_translations = {}, color$$module$runner$animation$segment_translations = module$color;
-  module$runner$animation$segment_translations.module$exports = {segments:{setupTo:function(a) {
-    for(var b = a.segments, c = 0, d = b.length;c < d;++c) {
-      for(var e = b[c], f = 0, g = e.length;f < g;++f) {
-        isNaN(e[f]) || (a["segment_" + c + "_" + f] = e[f])
+  module$runner$animation$translators$gradient.module$exports = {fillGradient:translation$$module$runner$animation$translators$gradient("fillGradient"), strokeGradient:translation$$module$runner$animation$translators$gradient("strokeGradient")};
+  module$runner$animation$translators$gradient.module$exports && (module$runner$animation$translators$gradient = module$runner$animation$translators$gradient.module$exports);
+  var module$runner$animation$translators$segment = {}, color$$module$runner$animation$translators$segment = module$color;
+  module$runner$animation$translators$segment.module$exports = {segments:{toNumeric:function(a, b) {
+    var c = [];
+    b || (this.segments = a);
+    for(var d = 0, e = a.length;d < e;++d) {
+      for(var f = a[d], g = 0, h = f.length;g < h;++g) {
+        isNaN(f[g]) || c.push(f[g])
       }
     }
-  }, setupFrom:function(a) {
-    var b = a.segments;
-    this._segments = b;
-    for(var c = 0, d = b.length;c < d;++c) {
-      for(var e = b[c], f = 0, g = e.length;f < g;++f) {
-        isNaN(e[f]) || (a["segment_" + c + "_" + f] = e[f])
+    return c
+  }, toAttr:function(a) {
+    for(var b = this.segments, c = 0, d = 0, e = b.length;d < e;++d) {
+      for(var f = b[d], g = 0, h = f.length;g < h;++g) {
+        isNaN(f[g]) || (f[g] = a[c++])
       }
     }
-    delete a.segments
-  }, step:function(a) {
-    for(var b = this._segments, c = 0, d = b.length;c < d;++c) {
-      for(var e = b[c], f = 0, g = e.length;f < g;++f) {
-        isNaN(a["segment_" + c + "_" + f]) || (e[f] = a["segment_" + c + "_" + f], delete a["segment_" + c + "_" + f])
-      }
-    }
-    a.segments = b
+    return b
   }}};
-  module$runner$animation$segment_translations.module$exports && (module$runner$animation$segment_translations = module$runner$animation$segment_translations.module$exports);
+  module$runner$animation$translators$segment.module$exports && (module$runner$animation$translators$segment = module$runner$animation$translators$segment.module$exports);
   var module$runner$filter$builtin = {}, filter$$module$runner$filter$builtin = module$runner$filter$base_filter, tools$$module$runner$filter$builtin = module$tools, color$$module$runner$filter$builtin = module$color;
   filter$$module$runner$filter$builtin.Blur = function(a) {
     return new filter$$module$runner$filter$builtin.BaseFilter("blur", a, 1)
@@ -1257,67 +1208,741 @@
   filter$$module$runner$filter$builtin.createFactory("sepia", filter$$module$runner$filter$builtin.Sepia);
   module$runner$filter$builtin.module$exports = filter$$module$runner$filter$builtin;
   module$runner$filter$builtin.module$exports && (module$runner$filter$builtin = module$runner$filter$builtin.module$exports);
-  var module$runner$animation$filter_translations = {}, tools$$module$runner$animation$filter_translations = module$tools, filter$$module$runner$animation$filter_translations = module$runner$filter$builtin, color$$module$runner$animation$filter_translations = module$color, prefix$$module$runner$animation$filter_translations = "filter_";
-  function setupFilterValues$$module$runner$animation$filter_translations(a, b, c) {
-    if(null != a) {
-      if(a instanceof filter$$module$runner$animation$filter_translations.BaseFilter) {
-        if(tools$$module$runner$animation$filter_translations.isArray(a.value)) {
-          for(var d = 0, e = a.value.length;d < e;++d) {
-            if(("dropShadowByOffset" === a.type || "dropShadowByAngle" === a.type) && 3 === d) {
-              var f = color$$module$runner$animation$filter_translations(a.value[d]);
-              c[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_r"] = f.r();
-              c[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_g"] = f.g();
-              c[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_b"] = f.b();
-              c[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_a"] = f.a()
+  var module$runner$animation$translators$filter = {}, tools$$module$runner$animation$translators$filter = module$tools, filter$$module$runner$animation$translators$filter = module$runner$filter$builtin, color$$module$runner$animation$translators$filter = module$color;
+  module$runner$animation$translators$filter.module$exports = {filters:{toNumeric:function(a, b) {
+    var c = [];
+    tools$$module$runner$animation$translators$filter.isArray(a) || (a = [a]);
+    b || (this.filters = a);
+    for(var d = 0, e = a.length;d < e;d++) {
+      var f = a[d];
+      if(null != f) {
+        if("number" == typeof f) {
+          c.push(f)
+        }else {
+          if(tools$$module$runner$animation$translators$filter.isArray(f.value)) {
+            for(var g = 0, h = f.value.length;g < h;++g) {
+              if(("dropShadowByOffset" === f.type || "dropShadowByAngle" === f.type) && 3 === g) {
+                var j = color$$module$runner$animation$translators$filter(f.value[g]);
+                c.push(j.r(), j.g(), j.b(), j.a())
+              }else {
+                c.push(f.value[g])
+              }
+            }
+          }else {
+            c.push(f.value)
+          }
+        }
+      }
+    }
+    return c
+  }, toAttr:function(a) {
+    for(var b = this.filters, c = 0, d = 0, e = b.length;d < e;d++) {
+      var f = b[d];
+      if(null != f) {
+        if(tools$$module$runner$animation$translators$filter.isArray(f.value)) {
+          for(var g = 0, h = f.value.length;g < h;++g) {
+            if(("dropShadowByOffset" === f.type || "dropShadowByAngle" === f.type) && 3 === g) {
+              var j = Number(new color$$module$runner$animation$translators$filter.RGBAColor(a[c++], a[c++], a[c++], a[c++]));
+              f.value[g] = j
             }else {
-              c[prefix$$module$runner$animation$filter_translations + b + "_" + d] = a.value[d]
+              f.value[g] = a[c++]
             }
           }
         }else {
-          c[prefix$$module$runner$animation$filter_translations + b] = a.value
+          f.value = a[c++]
         }
-      }else {
-        c[prefix$$module$runner$animation$filter_translations + b] = a
       }
+    }
+    return b
+  }}};
+  module$runner$animation$translators$filter.module$exports && (module$runner$animation$translators$filter = module$runner$animation$translators$filter.module$exports);
+  var module$runner$matrix = {}, Point$$module$runner$matrix = module$point, tools$$module$runner$matrix = module$tools, cos$$module$runner$matrix = Math.cos, sin$$module$runner$matrix = Math.sin;
+  function Matrix$$module$runner$matrix(a, b, c, d, e, f) {
+    if(tools$$module$runner$matrix.isArray(a)) {
+      return Matrix$$module$runner$matrix.apply(this, a)
+    }
+    this.a = null != a ? a : 1;
+    this.b = b || 0;
+    this.c = c || 0;
+    this.d = null != d ? d : 1;
+    this.tx = e || 0;
+    this.ty = f || 0
+  }
+  Matrix$$module$runner$matrix.prototype = {clone:function() {
+    return new Matrix$$module$runner$matrix(this.a, this.b, this.c, this.d, this.tx, this.ty)
+  }, concat:function(a) {
+    var b = this.a, c = this.b, d = this.c, e = this.d, f = this.tx, g = this.ty;
+    this.a = b * a.a + c * a.c;
+    this.b = b * a.b + c * a.d;
+    this.c = d * a.a + e * a.c;
+    this.d = d * a.b + e * a.d;
+    this.tx = f * a.a + g * a.c + a.tx;
+    this.ty = f * a.b + g * a.d + a.ty;
+    return this
+  }, createBox:function(a, b, c, d, e) {
+    return this.identify().rotate(c).scale(a, b).translate(d, e)
+  }, deltaTransformPoint:function(a) {
+    return new Point$$module$runner$matrix(this.a * a.x + this.c * a.y, this.b * a.x + this.d * a.y)
+  }, identify:function() {
+    this.a = this.d = 1;
+    this.b = this.c = this.tx = this.ty = 0;
+    return this
+  }, invert:function() {
+    var a = this.a * this.d - this.b * this.c, b = this.a, c = this.b, d = this.c, e = this.d, f = this.tx, g = this.ty;
+    this.a = e / a;
+    this.b = -c / a;
+    this.c = -d / a;
+    this.d = b / a;
+    this.tx = (d * g - e * f) / a;
+    this.ty = (c * f - b * g) / a;
+    return this
+  }, rotate:function(a) {
+    var b = cos$$module$runner$matrix(a), a = sin$$module$runner$matrix(a);
+    return this.concat(new Matrix$$module$runner$matrix(b, a, -a, b, 0, 0))
+  }, scale:function(a, b) {
+    this.a *= a;
+    this.b *= b;
+    this.c *= a;
+    this.d *= b;
+    this.tx *= a;
+    this.ty *= b;
+    return this
+  }, transformPoint:function(a) {
+    return new Point$$module$runner$matrix(this.a * a.x + this.c * a.y + this.tx, this.b * a.x + this.d * a.y + this.ty)
+  }, translate:function(a, b) {
+    this.tx += a;
+    this.ty += b;
+    return this
+  }};
+  Matrix$$module$runner$matrix.fromString = function(a) {
+    return new Matrix$$module$runner$matrix(a.match(/[^matrix(,)]+/g).map(Number))
+  };
+  module$runner$matrix.module$exports = Matrix$$module$runner$matrix;
+  module$runner$matrix.module$exports && (module$runner$matrix = module$runner$matrix.module$exports);
+  var module$runner$animation$translators$matrix = {}, Matrix$$module$runner$animation$translators$matrix = module$runner$matrix;
+  module$runner$animation$translators$matrix.module$exports = {matrix:{toNumeric:function(a) {
+    this.animatedMatrix = new Matrix$$module$runner$animation$translators$matrix;
+    return[a.a, a.b, a.c, a.d, a.tx, a.ty]
+  }, toAttr:function(a) {
+    var b = this.animatedMatrix;
+    b.a = a[0];
+    b.b = a[1];
+    b.c = a[2];
+    b.d = a[3];
+    b.tx = a[4];
+    b.ty = a[5];
+    return this.animatedMatrix
+  }}};
+  module$runner$animation$translators$matrix.module$exports && (module$runner$animation$translators$matrix = module$runner$animation$translators$matrix.module$exports);
+  var module$runner$animation$properties_tween = {}, tools$$module$runner$animation$properties_tween = module$tools, PropertyTween$$module$runner$animation$properties_tween = module$runner$animation$property_tween, colorTranslators$$module$runner$animation$properties_tween = module$runner$animation$translators$color, gradientTranslators$$module$runner$animation$properties_tween = module$runner$animation$translators$gradient, filterTranslators$$module$runner$animation$properties_tween = module$runner$animation$translators$filter, 
+  segmentTranslators$$module$runner$animation$properties_tween = module$runner$animation$translators$segment, matrixTranslators$$module$runner$animation$properties_tween = module$runner$animation$translators$matrix, cornerRadiusTranslators$$module$runner$animation$properties_tween = module$runner$animation$translators$corner_radius, mixin$$module$runner$animation$properties_tween = tools$$module$runner$animation$properties_tween.mixin, forEach$$module$runner$animation$properties_tween = tools$$module$runner$animation$properties_tween.forEach, 
+  translators$$module$runner$animation$properties_tween = PropertiesTween$$module$runner$animation$properties_tween.propertyTranslators = {};
+  mixin$$module$runner$animation$properties_tween(translators$$module$runner$animation$properties_tween, colorTranslators$$module$runner$animation$properties_tween);
+  mixin$$module$runner$animation$properties_tween(translators$$module$runner$animation$properties_tween, gradientTranslators$$module$runner$animation$properties_tween);
+  mixin$$module$runner$animation$properties_tween(translators$$module$runner$animation$properties_tween, filterTranslators$$module$runner$animation$properties_tween);
+  mixin$$module$runner$animation$properties_tween(translators$$module$runner$animation$properties_tween, segmentTranslators$$module$runner$animation$properties_tween);
+  mixin$$module$runner$animation$properties_tween(translators$$module$runner$animation$properties_tween, matrixTranslators$$module$runner$animation$properties_tween);
+  mixin$$module$runner$animation$properties_tween(translators$$module$runner$animation$properties_tween, cornerRadiusTranslators$$module$runner$animation$properties_tween);
+  function PropertiesTween$$module$runner$animation$properties_tween(a, b) {
+    this.propertiesFrom = mixin$$module$runner$animation$properties_tween({}, a);
+    this.propertiesTo = mixin$$module$runner$animation$properties_tween({}, b);
+    for(var c in this.propertiesFrom) {
+      c in this.propertiesTo || delete this.propertiesFrom[c]
+    }
+    this.propertyNames = Object.keys(this.propertiesFrom);
+    this.propertyLength = this.propertyNames.length;
+    this.propertyTweens = [];
+    this._setupTweens();
+    this._values = {}
+  }
+  PropertiesTween$$module$runner$animation$properties_tween.prototype = {at:function(a) {
+    for(var b = this._values, c = this.propertyTweens, d = this.propertyNames, e = 0, f = this.propertyLength;e < f;++e) {
+      b[d[e]] = c[e].at(a)
+    }
+    return b
+  }, _setupTweens:function() {
+    var a = this.propertiesFrom, b = this.propertiesTo, c = this.propertyTweens;
+    forEach$$module$runner$animation$properties_tween(this.propertyNames, function(d) {
+      c.push(new PropertyTween$$module$runner$animation$properties_tween(a[d], b[d], translators$$module$runner$animation$properties_tween[d]))
+    })
+  }};
+  module$runner$animation$properties_tween.module$exports = PropertiesTween$$module$runner$animation$properties_tween;
+  module$runner$animation$properties_tween.module$exports && (module$runner$animation$properties_tween = module$runner$animation$properties_tween.module$exports);
+  var module$runner$animation$keyframe_animation = {}, easing$$module$runner$animation$keyframe_animation = module$runner$animation$easing, tools$$module$runner$animation$keyframe_animation = module$tools, EventEmitter$$module$runner$animation$keyframe_animation = module$event_emitter, PropertiesTween$$module$runner$animation$keyframe_animation = module$runner$animation$properties_tween, hasOwn$$module$runner$animation$keyframe_animation = {}.hasOwnProperty, forEach$$module$runner$animation$keyframe_animation = 
+  tools$$module$runner$animation$keyframe_animation.forEach;
+  function getEasingFunction$$module$runner$animation$keyframe_animation(a) {
+    return"function" == typeof a ? a : easing$$module$runner$animation$keyframe_animation[a]
+  }
+  function KeyframeAnimation$$module$runner$animation$keyframe_animation(a, b, c, d) {
+    d || (d = {});
+    this.clock = a;
+    b = this.duration = +b || a.toFrameNumber(b);
+    this._parseEventProps(d);
+    this.subjects = [];
+    this.initialValues = null;
+    this.repeat = (d.repeat || 0) - (d.repeat % 1 || 0);
+    this.delay = d.delay && a.toFrameNumber(d.delay) || 0;
+    this.isTimelineBound = !1 !== d.isTimelineBound;
+    this.easing = getEasingFunction$$module$runner$animation$keyframe_animation(d.easing);
+    this.frame = this.prevFrame = 0;
+    this.currentDelay = this.delay;
+    this.currentTweenIndex = 0;
+    this.keyframes = this._convertKeysToFrames(c);
+    this.keys = Object.keys(this.keyframes).map(Number);
+    this.keys.sort(function(a, b) {
+      return a - b
+    });
+    d.subjects && this.addSubjects(d.subjects)
+  }
+  KeyframeAnimation$$module$runner$animation$keyframe_animation.prototype = {_parseEventProps:function(a) {
+    var b, c;
+    for(b in a) {
+      "function" === typeof a[b] && 0 === b.indexOf("on") && (c = b.slice(2).toLowerCase(), this.on(c, a[b]), delete a[b])
+    }
+  }, clone:function() {
+    return new KeyframeAnimation$$module$runner$animation$keyframe_animation(this.clock, this.duration, tools$$module$runner$animation$keyframe_animation.mixin({}, this.keyframes), {clock:this.clock, duration:this.duration, easing:this.easing, isTimelineBound:this.isTimelineBound})
+  }, play:function(a) {
+    a && this.addSubjects(a);
+    if(!this.subjects.length) {
+      throw Error("No subjects defined -- animation cannot play");
+    }
+    if(this.isPlaying) {
+      return this
+    }
+    0 === this.frame && this.emit("beforebegin", this);
+    this.emit("play", this);
+    var b = this.keyframes[0];
+    b && 0 === this.currentTweenIndex && forEach$$module$runner$animation$keyframe_animation(this.subjects, function(a) {
+      a.subject.attr(b)
+    });
+    this.isPlaying = !0;
+    this.clock.on(this.isTimelineBound ? "advance" : "tick", this, this._onStep);
+    return this
+  }, pause:function() {
+    this.clock.removeListener(this.isTimelineBound ? "advance" : "tick", this, this._onStep);
+    this.emit("pause", this);
+    this.isPlaying = !1;
+    return this
+  }, reset:function() {
+    this.frame = 0;
+    this.isPlaying = !1;
+    this.currentTweenIndex = 0;
+    this.clock.removeListener(this.isTimelineBound ? "advance" : "tick", this, this._onStep);
+    return this
+  }, _onStep:function(a, b, c) {
+    if(!(0 < this.currentDelay && this.currentDelay--)) {
+      this.prevFrame = this.prevFrame || b;
+      var a = this.duration, d = this.frame = this.isTimelineBound ? this.frame + (b - this.prevFrame || 1) : this.frame + 1;
+      this.step(d / a);
+      this.isTimelineBound && c || d === a ? (this.prevFrame = 0, this.currentDelay = this.delay, this.reset(), 0 < this.repeat-- ? this.play() : this.emit("end", this)) : this.prevFrame = b
+    }
+  }, step:function(a) {
+    var b = a;
+    this.easing && (a = this.easing(a));
+    var c = this.subjects[0].tweens.length, d = this.subjects[0].tweens[this.currentTweenIndex], a = (a - d.startProgress) / (d.endProgress - d.startProgress);
+    if(1 < a && this.currentTweenIndex + 1 < c) {
+      return this.currentTweenIndex += 1, this.step(b)
+    }
+    b = this.subjects;
+    c = 0;
+    for(d = b.length;c < d;++c) {
+      var e = b[c].tweens[this.currentTweenIndex], f = e.easing;
+      b[c].subject.attr(e.at(f ? f(a) : a))
+    }
+  }, addSubject:function(a) {
+    var b = tools$$module$runner$animation$keyframe_animation.mixin(a.attr(), this.keyframes[0]);
+    this.subjects.length || this._fillInProperties(b);
+    this.subjects.push({subject:a, tweens:this._createTweens(b)});
+    return this
+  }, addSubjects:function(a) {
+    var b = this, a = tools$$module$runner$animation$keyframe_animation.isArray(a) ? a : [a];
+    forEach$$module$runner$animation$keyframe_animation(a, function(a) {
+      b.addSubject(a)
+    });
+    return this
+  }, removeSubject:function(a) {
+    for(var b = 0, c = this.subjects.length;b < c;++b) {
+      if(this.subjects[b].subject === a) {
+        this.subjects.splice(b, 1);
+        for(var d = 0, e = this.animations.length;d < e;++d) {
+          this.animations[d].removeSubject(a)
+        }
+      }
+    }
+  }, removeSubjects:function(a) {
+    forEach$$module$runner$animation$keyframe_animation(a, tools$$module$runner$animation$keyframe_animation.hitch(this, "removeSubject"));
+    return this
+  }, _createTweens:function(a) {
+    var b, c = 0, d = [], e = this.keyframes, f = a;
+    forEach$$module$runner$animation$keyframe_animation(this.keys, function(a) {
+      if(0 !== a) {
+        var h, j = e[a].easing;
+        h = new PropertiesTween$$module$runner$animation$keyframe_animation(f, e[a]);
+        h.easing = getEasingFunction$$module$runner$animation$keyframe_animation(j);
+        b = a - c;
+        h.startProgress = c / this.duration;
+        h.endProgress = h.startProgress + b / this.duration;
+        c += b;
+        f = e[a];
+        d.push(h)
+      }
+    }, this);
+    return d
+  }, _fillInProperties:function(a) {
+    var b = this.easingFn, c = this.duration, d = this.keys, e = this.keyframes, f, g = {};
+    forEach$$module$runner$animation$keyframe_animation(d, function(a) {
+      f = e[a];
+      for(var b in f) {
+        hasOwn$$module$runner$animation$keyframe_animation.call(f, b) && (g[b] = !0)
+      }
+    });
+    forEach$$module$runner$animation$keyframe_animation(d, function(h, j) {
+      var i, k, l, m, n;
+      f = e[h];
+      for(var o in g) {
+        if(!hasOwn$$module$runner$animation$keyframe_animation.call(f, o) && "easing" !== o) {
+          a: {
+            i = o;
+            for(k = j;k--;) {
+              if(hasOwn$$module$runner$animation$keyframe_animation.call(e[d[k]], i)) {
+                i = d[k];
+                break a
+              }
+            }
+            i = null
+          }
+          a: {
+            k = o;
+            n = j;
+            for(m = d.length;n < m;++n) {
+              if(hasOwn$$module$runner$animation$keyframe_animation.call(e[d[n]], k)) {
+                k = d[n];
+                break a
+              }
+            }
+            k = null
+          }
+          l = i && e[i][o] || a[o];
+          m = k && e[k][o];
+          if(null == l) {
+            throw Error("No initial value specified for property: " + o);
+          }
+          null == m && (m = l, k = c);
+          n = {};
+          n[o] = l;
+          l = {};
+          l[o] = m;
+          i = (h - i) / (k - i);
+          b && (i = b(i));
+          k.easing && (i = getEasingFunction$$module$runner$animation$keyframe_animation(k.easing)(i));
+          f[o] = (new PropertiesTween$$module$runner$animation$keyframe_animation(n, l)).at(i)[o]
+        }
+      }
+    }, this)
+  }, _convertKeysToFrames:function(a) {
+    for(var b, c, d = 0, e = this.clock, f = this.duration, g = Object.keys(a), h = Object.create(null), j = 0, i = g.length;j < i;j++) {
+      b = g[j], c = b == +b ? b : /^(?:from|start)$/.test(b) ? 0 : /^(?:to|end)$/.test(b) ? f : /^\d+%$/.test(b) ? f * parseFloat(b) / 100 : e.toFrameNumber(b), h[c] = a[b], c > d && (d = c)
+    }
+    d > this.duration && (this.duration = d);
+    return h
+  }};
+  tools$$module$runner$animation$keyframe_animation.mixin(KeyframeAnimation$$module$runner$animation$keyframe_animation.prototype, EventEmitter$$module$runner$animation$keyframe_animation);
+  module$runner$animation$keyframe_animation.module$exports = KeyframeAnimation$$module$runner$animation$keyframe_animation;
+  module$runner$animation$keyframe_animation.module$exports && (module$runner$animation$keyframe_animation = module$runner$animation$keyframe_animation.module$exports);
+  var module$runner$animation$animation = {}, KeyframeAnimation$$module$runner$animation$animation = module$runner$animation$keyframe_animation;
+  function Animation$$module$runner$animation$animation(a, b, c, d) {
+    return new KeyframeAnimation$$module$runner$animation$animation(a, b, {to:c}, d)
+  }
+  module$runner$animation$animation.module$exports = Animation$$module$runner$animation$animation;
+  module$runner$animation$animation.module$exports && (module$runner$animation$animation = module$runner$animation$animation.module$exports);
+  var module$runner$display_object = {}, EventEmitter$$module$runner$display_object = module$event_emitter, tools$$module$runner$display_object = module$tools, Matrix$$module$runner$display_object = module$runner$matrix, Point$$module$runner$display_object = module$point, Animation$$module$runner$display_object = module$runner$animation$animation, KeyframeAnimation$$module$runner$display_object = module$runner$animation$keyframe_animation, filter$$module$runner$display_object = module$runner$filter$builtin, 
+  accessor$$module$runner$display_object = tools$$module$runner$display_object.descriptorAccessor, data$$module$runner$display_object = tools$$module$runner$display_object.descriptorData, getter$$module$runner$display_object = tools$$module$runner$display_object.getter, uid$$module$runner$display_object = 1, atan2$$module$runner$display_object = Math.atan2, PI$$module$runner$display_object = Math.PI, isfinite$$module$runner$display_object = isFinite;
+  function getRotation$$module$runner$display_object() {
+    var a = this._matrix, b = atan2$$module$runner$display_object(a.b, a.a), a = -atan2$$module$runner$display_object(a.c, a.d);
+    return b > a ? b : a
+  }
+  function setRotation$$module$runner$display_object(a) {
+    if(isfinite$$module$runner$display_object(a)) {
+      var a = +a % (2 * PI$$module$runner$display_object) || 0, b = this._matrix, c = b.transformPoint(this.origin), d = c.x, c = c.y;
+      b.tx -= d;
+      b.ty -= c;
+      b.rotate(a - this.rotation);
+      b.tx += d;
+      b.ty += c;
+      this._owner._mutatedAttributes.matrix = !0
     }
   }
-  module$runner$animation$filter_translations.module$exports = {filters:{setupTo:function(a) {
-    tools$$module$runner$animation$filter_translations.isArray(a.filters) || (a.filters = [a.filters]);
-    for(var b = 0, c = a.filters.length;b < c;b++) {
-      setupFilterValues$$module$runner$animation$filter_translations(a.filters[b], b, a)
+  function getMatrix$$module$runner$display_object() {
+    var a, b = this._matrix.clone(), c = this._scaleX, d = this._scaleY;
+    if(1 !== c || 1 !== d) {
+      a = b.transformPoint(this._origin), b.tx -= a.x, b.ty -= a.y, b.scale(c, d), b.tx += a.x, b.ty += a.y
     }
-    this._to = a.filters;
-    delete a.filters
-  }, setupFrom:function(a) {
-    for(var b = 0, c = this._to.length;b < c;b++) {
-      setupFilterValues$$module$runner$animation$filter_translations(a.filters[b], b, a)
+    return b
+  }
+  function setMatrix$$module$runner$display_object(a) {
+    var b = this._matrix;
+    b.a = a.a;
+    b.b = a.b;
+    b.c = a.c;
+    b.d = a.d;
+    b.tx = a.tx;
+    b.ty = a.ty
+  }
+  function getX$$module$runner$display_object() {
+    return this.matrix.tx
+  }
+  function setX$$module$runner$display_object(a) {
+    isfinite$$module$runner$display_object(a) && (this._matrix.tx = 1 === this._scaleX ? a : this._matrix.tx + (a - this.matrix.tx), this._owner._mutatedAttributes.matrix = !0)
+  }
+  function getY$$module$runner$display_object() {
+    return this.matrix.ty
+  }
+  function setY$$module$runner$display_object(a) {
+    isfinite$$module$runner$display_object(a) && (this._matrix.ty = 1 === this._scaleY ? a : this._matrix.ty + (a - this.matrix.ty), this._owner._mutatedAttributes.matrix = !0)
+  }
+  function getScaleX$$module$runner$display_object() {
+    return this._scaleX
+  }
+  function setScaleX$$module$runner$display_object(a) {
+    isfinite$$module$runner$display_object(a) && (this._scaleX = +a, this._owner._mutatedAttributes.matrix = !0)
+  }
+  function getScaleY$$module$runner$display_object() {
+    return this._scaleY
+  }
+  function setScaleY$$module$runner$display_object(a) {
+    isfinite$$module$runner$display_object(a) && (this._scaleY = +a, this._owner._mutatedAttributes.matrix = !0)
+  }
+  function getScale$$module$runner$display_object() {
+    return(this.scaleX + this.scaleY) / 2
+  }
+  function setScale$$module$runner$display_object(a) {
+    this.scaleX = this.scaleY = a
+  }
+  var getOpacity$$module$runner$display_object = getter$$module$runner$display_object("_opacity");
+  function setOpacity$$module$runner$display_object(a) {
+    this._opacity = 1 < a ? 1 : 0 > a ? 0 : +a
+  }
+  function getOrigin$$module$runner$display_object() {
+    return this._origin.clone()
+  }
+  function setOrigin$$module$runner$display_object(a) {
+    var b = this._origin;
+    b.x = a.x;
+    b.y = a.y
+  }
+  function getCursor$$module$runner$display_object() {
+    return this._cursor
+  }
+  function setCursor$$module$runner$display_object(a) {
+    a ? /^(?:default|pointer|wait|progress)$/.test(a) && (this._cursor = a) : this._cursor = null
+  }
+  function getFilters$$module$runner$display_object() {
+    return this._filters.slice(0)
+  }
+  function setFilters$$module$runner$display_object(a) {
+    a ? (a = [].concat(a), this._filters = a = a.map(function(a) {
+      return a instanceof filter$$module$runner$display_object.BaseFilter ? a : new filter$$module$runner$display_object[a]
+    })) : this._filters.length = 0
+  }
+  function setClip$$module$runner$display_object(a) {
+    var b = this._owner;
+    b._mutatedAttributes.clipId = !0;
+    if(a) {
+      if(a.stage && !a._isOffStage) {
+        throw Error("You cannot set a clip that has been previously added to the stage");
+      }
+      if(!("composeRenderMessage" in a)) {
+        throw Error("Not a valid clip element");
+      }
+      b.stage && DisplayObject$$module$runner$display_object.registerOffStageObj(b, a, b.stage, "clip");
+      this._clipId = a.id;
+      this._clip = a
+    }else {
+      this._clip && DisplayObject$$module$runner$display_object.unregisterOffStageObj(b, this._clip), this._clipId = this._clip = null
     }
-    this._filters = a.filters;
-    delete a.filters
-  }, step:function(a) {
-    for(var b = 0, c = this._to.length;b < c;b++) {
-      if(null != this._to[b]) {
-        if(null != a[prefix$$module$runner$animation$filter_translations + b]) {
-          this._filters[b].value = a[prefix$$module$runner$animation$filter_translations + b], delete a[prefix$$module$runner$animation$filter_translations + b]
-        }else {
-          for(var d = 0, e = this._to[b].value.length;d < e;++d) {
-            if(("dropShadowByOffset" === this._to[b].type || "dropShadowByAngle" === this._to[b].type) && 3 === d) {
-              var f = Number(new color$$module$runner$animation$filter_translations.RGBAColor(a[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_r"], a[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_g"], a[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_b"], a[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_a"]));
-              delete a[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_r"];
-              delete a[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_g"];
-              delete a[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_b"];
-              delete a[prefix$$module$runner$animation$filter_translations + b + "_" + d + "_a"];
-              this._filters[b].value[d] = f
-            }else {
-              this._filters[b].value[d] = a[prefix$$module$runner$animation$filter_translations + b + "_" + d], delete a[prefix$$module$runner$animation$filter_translations + b + "_" + d]
-            }
-          }
+  }
+  function getClip$$module$runner$display_object() {
+    return this._clip
+  }
+  function setMask$$module$runner$display_object(a) {
+    var b = this._owner;
+    b._mutatedAttributes.maskId = !0;
+    if(a) {
+      if(a.stage && !a._isOffStage) {
+        throw Error("You cannot set a mask that has been previously added to the stage");
+      }
+      if(!("composeRenderMessage" in a)) {
+        throw Error("Not a valid mask");
+      }
+      b.stage && DisplayObject$$module$runner$display_object.registerOffStageObj(b, a, b.stage, "mask");
+      this._maskId = a.id;
+      this._mask = a
+    }else {
+      this._mask && DisplayObject$$module$runner$display_object.unregisterOffStageObj(b, this._mask), this._maskId = this._mask = null
+    }
+  }
+  function getMask$$module$runner$display_object() {
+    return this._mask
+  }
+  function DisplayObject$$module$runner$display_object() {
+    Object.defineProperty(this, "id", {value:uid$$module$runner$display_object++});
+    this._attributes = Object.create(null, {_owner:data$$module$runner$display_object(this), _matrix:data$$module$runner$display_object(new Matrix$$module$runner$display_object), matrix:accessor$$module$runner$display_object(getMatrix$$module$runner$display_object, setMatrix$$module$runner$display_object, !0), _filters:data$$module$runner$display_object([], !0), filters:accessor$$module$runner$display_object(getFilters$$module$runner$display_object, setFilters$$module$runner$display_object, !0), 
+    interactive:data$$module$runner$display_object(!0, !0), _opacity:data$$module$runner$display_object(1, !0), opacity:accessor$$module$runner$display_object(getOpacity$$module$runner$display_object, setOpacity$$module$runner$display_object, !0), _origin:data$$module$runner$display_object(new Point$$module$runner$display_object), origin:accessor$$module$runner$display_object(getOrigin$$module$runner$display_object, setOrigin$$module$runner$display_object, !0), rotation:accessor$$module$runner$display_object(getRotation$$module$runner$display_object, 
+    setRotation$$module$runner$display_object, !0), _scaleX:data$$module$runner$display_object(1, !0), _scaleY:data$$module$runner$display_object(1, !0), scale:accessor$$module$runner$display_object(getScale$$module$runner$display_object, setScale$$module$runner$display_object, !0), scaleX:accessor$$module$runner$display_object(getScaleX$$module$runner$display_object, setScaleX$$module$runner$display_object, !0), scaleY:accessor$$module$runner$display_object(getScaleY$$module$runner$display_object, 
+    setScaleY$$module$runner$display_object, !0), x:accessor$$module$runner$display_object(getX$$module$runner$display_object, setX$$module$runner$display_object, !0), y:accessor$$module$runner$display_object(getY$$module$runner$display_object, setY$$module$runner$display_object, !0), clip:accessor$$module$runner$display_object(getClip$$module$runner$display_object, setClip$$module$runner$display_object, !0), _clip:data$$module$runner$display_object(null, !0), _clipId:data$$module$runner$display_object(null, 
+    !0), mask:accessor$$module$runner$display_object(getMask$$module$runner$display_object, setMask$$module$runner$display_object, !0), _mask:data$$module$runner$display_object(null, !0), _maskId:data$$module$runner$display_object(null, !0), cursor:accessor$$module$runner$display_object(getCursor$$module$runner$display_object, setCursor$$module$runner$display_object, !0), _cursor:data$$module$runner$display_object(null, !0), fillRule:data$$module$runner$display_object("inherit", !0), visible:data$$module$runner$display_object(!0, 
+    !0)});
+    this._isOffStage = !1;
+    this._renderAttributes = {matrix:"matrix", filters:"_filters", opacity:"_opacity", clipId:"_clipId", maskId:"_maskId", cursor:"_cursor", fillRule:"fillRule", visible:"visible", interactive:"interactive"};
+    this._mutatedAttributes = tools$$module$runner$display_object.mixin({}, this._renderAttributes)
+  }
+  DisplayObject$$module$runner$display_object.registerOffStageObj = function(a, b, c, d, e) {
+    if(c && (b.stage = c, b._offStageType = d, b._isOffStage = !0, c.registry.needsDraw[b.id] = b, c.registry.needsInsertion[b.id] = b, c.registry.displayObjects[b.id] = b, "Movie" === b.type && c.registry.movies.add(b), e || (b.parent = c, b._offStageUseCount = b._offStageUseCount ? b._offStageUseCount + 1 : 1, a.once("removedFromStage", function() {
+      1 === b._offStageUseCount ? DisplayObject$$module$runner$display_object.unregisterOffStageObj(a, b, !0) : b._offStageUseCount--
+    })), b._activate(c), e = b.displayList && b.displayList.children)) {
+      for(var f = 0, g = e.length;f < g;++f) {
+        var h = e[f];
+        h && DisplayObject$$module$runner$display_object.registerOffStageObj(a, h, c, d, !0)
+      }
+    }
+  };
+  DisplayObject$$module$runner$display_object.unregisterOffStageObj = function(a, b, c) {
+    if(!c) {
+      if(0 < --b._offStageUseCount) {
+        return
+      }
+      delete b._offStageUseCount
+    }
+    if(c = b.stage) {
+      if(b.emit("removedFromStage"), c.registry.needsDraw[b.id] = b, delete c.registry.needsInsertion[b.id], delete c.registry.displayObjects[b.id], delete b.stage, b.markUpdate("shapeData"), delete b._offStageType, b._isOffStage = !1, b = b.displayList && b.displayList.children) {
+        for(var c = 0, d = b.length;c < d;++c) {
+          var e = b[c];
+          e && DisplayObject$$module$runner$display_object.unregisterOffStageObj(a, e, !0)
         }
       }
     }
-    a.filters = this._filters
-  }}};
-  module$runner$animation$filter_translations.module$exports && (module$runner$animation$filter_translations = module$runner$animation$filter_translations.module$exports);
+  };
+  var proto$$module$runner$display_object = DisplayObject$$module$runner$display_object.prototype = {parent:null, type:"DisplayObject", _activate:function(a) {
+    this.stage = a;
+    this._mutatedAttributes = tools$$module$runner$display_object.mixin({}, this._renderAttributes);
+    var b = this._attributes, c = b._clip;
+    c && DisplayObject$$module$runner$display_object.registerOffStageObj(this, c, a, "clip");
+    (b = b._mask) && DisplayObject$$module$runner$display_object.registerOffStageObj(this, b, a, "mask");
+    this.parent._isOffStage && (this._offStageType = this.parent._offStageType, this._isOffStage = !0);
+    a = a.registry;
+    a.displayObjects[this.id] = this;
+    a.needsInsertion[this.id] = this;
+    this.markUpdate();
+    this.emit("addedToStage")
+  }, _deactivate:function() {
+    var a = this.stage;
+    if(a) {
+      var a = a.registry, b = this.id;
+      this.stage = void 0;
+      a.needsDraw[b] = this;
+      delete a.displayObjects[b];
+      delete a.needsInsertion[b]
+    }
+    this.emit("removedFromStage")
+  }, attr:function(a, b) {
+    var c, d;
+    c = !1;
+    var e = this._attributes;
+    switch(arguments.length) {
+      case 0:
+        c = {};
+        for(d in e) {
+          "_" != d.charAt(0) && (c[d] = e[d])
+        }
+        return c;
+      case 1:
+        if("string" == typeof a) {
+          return a in e && "_" != a.charAt(0) ? e[a] : void 0
+        }
+        for(d in a) {
+          b = a[d], d in e && "_" != d.charAt(0) && e[d] !== b && (e[d] = b, c = this._mutatedAttributes[d] = !0)
+        }
+        break;
+      case 2:
+        a in e && "_" != a.charAt(0) && e[a] !== b && (e[a] = b, c = this._mutatedAttributes[a] = !0)
+    }
+    c && this.markUpdate();
+    return this
+  }, getAbsoluteMatrix:function() {
+    for(var a = this.attr("matrix").clone(), b = this;(b = b.parent) && 0 !== b.id;) {
+      a.concat(b.attr("matrix"))
+    }
+    return a
+  }, getAbsoluteBoundingBox:function() {
+    return this.getBoundingBox(this.getAbsoluteMatrix())
+  }, getBoundingBox:function(a) {
+    var b = 0, c = 0;
+    a && (a = a.transformPoint({x:0, y:0}), b = a.x, c = a.y);
+    return{top:c, right:b, bottom:c, left:b, width:0, height:0}
+  }, destroy:function() {
+    return this.emit("destroy", this).removeAllListeners().remove()
+  }, mask:function() {
+  }, blendMode:function() {
+  }, markUpdate:function() {
+    var a = this.stage;
+    a && (a.registry.needsDraw[this.id] = this);
+    return this
+  }, addTo:function(a, b) {
+    1 === arguments.length ? a.addChild(this) : a.addChild(this, b);
+    return this
+  }, addAfter:function(a) {
+    var b = a.parent;
+    b.addChild(this, b.getIndexOfChild(a) + 1);
+    return this
+  }, addBefore:function(a) {
+    var b = a.parent;
+    b.addChild(this, b.getIndexOfChild(a));
+    return this
+  }, remove:function(a) {
+    var b = this.parent;
+    b && b.removeChild(this, a);
+    return this
+  }, setOrigin:function(a, b) {
+    return this.attr("origin", {x:a, y:b})
+  }, composeRenderMessage:function(a) {
+    a || (a = {attributes:{}, id:this.id});
+    var b = a.attributes || {}, c = this._mutatedAttributes, d = this._renderAttributes, e = this._attributes, f;
+    for(f in c) {
+      f in d && (b[f] = e[d[f]])
+    }
+    this._mutatedAttributes = {};
+    a.attributes = b;
+    a.data = this._getRenderData && this._getRenderData();
+    a.type = this.type;
+    a.offStageType = this._offStageType;
+    return a
+  }, animate:function(a, b, c) {
+    var d = a;
+    if(/number|string/.test(typeof a) || !(d instanceof Animation$$module$runner$display_object || d instanceof KeyframeAnimation$$module$runner$display_object)) {
+      d = c && c.clock || this.stage;
+      c || (c = {});
+      if(!d) {
+        for(d = this;d && !d.emitFrame;) {
+          d = d.parent
+        }
+      }
+      if(!d) {
+        return this.once("addedToStage", function() {
+          this.animate(a, b, c)
+        }), this
+      }
+      d = new Animation$$module$runner$display_object(d, a, b, c)
+    }
+    d.addSubject(this).play();
+    return this
+  }};
+  tools$$module$runner$display_object.mixin(proto$$module$runner$display_object, EventEmitter$$module$runner$display_object);
+  module$runner$display_object.module$exports = DisplayObject$$module$runner$display_object;
+  module$runner$display_object.module$exports && (module$runner$display_object = module$runner$display_object.module$exports);
+  var module$runner$display_list = {}, tools$$module$runner$display_list = module$tools, DisplayObject$$module$runner$display_list = module$runner$display_object, isArray$$module$runner$display_list = tools$$module$runner$display_list.isArray, max$$module$runner$display_list = Math.max, min$$module$runner$display_list = Math.min;
+  function getAncestors$$module$runner$display_list(a) {
+    var b = [];
+    do {
+      b.push(a), a = a.parent
+    }while(a);
+    return b
+  }
+  function inThisArray$$module$runner$display_list(a) {
+    return-1 !== this.indexOf(a)
+  }
+  function DisplayList$$module$runner$display_list(a) {
+    this.children = [];
+    this.owner = a
+  }
+  DisplayList$$module$runner$display_list.prototype = {add:function(a, b) {
+    var c = isArray$$module$runner$display_list(a), d = this.owner, e = getAncestors$$module$runner$display_list(d), f = c ? a.length : 1;
+    if(c || -1 === e.indexOf(a)) {
+      if((!c || !a.some(inThisArray$$module$runner$display_list, e)) && 0 !== f) {
+        var e = this.children, g = e.length, b = void 0 === b ? g : min$$module$runner$display_list(b >>> 0, g);
+        c ? e.splice.apply(e, [b, 0].concat(a)) : e.splice(b, 0, a);
+        0 < b && (e[b - 1].next = c ? a[0] : a);
+        for(var c = b + f, f = d.stage, h, g = b;g < c;g += 1) {
+          a = h || e[g], (h = a.parent) && h.displayList.remove(a), h = e[g + 1], a.next = h, a.parent = d, f && a._activate(f)
+        }
+      }
+    }
+  }, clear:function() {
+    for(var a = this.children, b = 0, c;c = a[b];b += 1) {
+      c.stage && c._deactivate(), c.next = c.parent = void 0
+    }
+    a.length = 0
+  }, contains:function(a) {
+    var b = this.children;
+    return-1 !== b.indexOf(a) || b.some(function(b) {
+      return b.displayList && b.displayList.contains(a)
+    })
+  }, remove:function(a) {
+    var b = this.children, c = b.indexOf(a);
+    if(-1 === c) {
+      return!1
+    }
+    0 < c && (b[c - 1].next = a.next);
+    a.next = a.parent = void 0;
+    a.stage && a._deactivate();
+    b.splice(c, 1);
+    return!0
+  }};
+  function activate$$module$runner$display_list(a) {
+    DisplayObject$$module$runner$display_list.prototype._activate.call(this, a);
+    for(var b = this.displayList.children, c = 0, d = b.length;c < d;c += 1) {
+      b[c]._activate(a)
+    }
+  }
+  function deactivate$$module$runner$display_list() {
+    DisplayObject$$module$runner$display_list.prototype._deactivate.call(this);
+    for(var a = this.displayList.children, b = 0, c = a.length;b < c;b += 1) {
+      a[b]._deactivate()
+    }
+  }
+  var methods$$module$runner$display_list = {_activate:activate$$module$runner$display_list, _deactivate:deactivate$$module$runner$display_list, addChild:function(a, b) {
+    this.displayList.add(a, b);
+    return this
+  }, children:function(a) {
+    var b = this.displayList;
+    return arguments.length ? (b.clear(), b.add(a), this) : b.children.slice()
+  }, clear:function() {
+    this.displayList.clear();
+    return this
+  }, getBoundingBox:function(a) {
+    var b = this.displayList.children;
+    if(!b.length) {
+      return DisplayObject$$module$runner$display_list.prototype.getBoundingBox.call(this, a)
+    }
+    b = tools$$module$runner$display_list.reduce(b, function(b, d, e) {
+      var f = d.attr("matrix").clone(), f = d.getBoundingBox(a ? f.concat(a) : f), g = d.attr("x"), d = d.attr("y"), g = d = 0, e = 0 === e, h = d + f.top;
+      b.top = e ? h : min$$module$runner$display_list(b.top, h);
+      h = g + f.right;
+      b.right = e ? h : max$$module$runner$display_list(b.right, h);
+      d += f.bottom;
+      b.bottom = e ? d : max$$module$runner$display_list(b.bottom, d);
+      f = g + f.left;
+      b.left = e ? f : min$$module$runner$display_list(b.left, f);
+      return b
+    }, {top:0, right:0, bottom:0, left:0, width:0, height:0});
+    b.height = b.bottom - b.top;
+    b.width = b.right - b.left;
+    return b
+  }, getIndexOfChild:function(a) {
+    return this.displayList.children.indexOf(a)
+  }, removeChild:function(a) {
+    this.displayList.remove(a);
+    return this
+  }}, timelineMethods$$module$runner$display_list = tools$$module$runner$display_list.mixin({}, methods$$module$runner$display_list);
+  timelineMethods$$module$runner$display_list._activate = function(a) {
+    activate$$module$runner$display_list.call(this, a);
+    a && a.registry.movies.add(this)
+  };
+  timelineMethods$$module$runner$display_list._deactivate = function() {
+    this.stage && this.stage.registry.movies.remove(this);
+    deactivate$$module$runner$display_list.call(this)
+  };
+  module$runner$display_list.module$exports = {DisplayList:DisplayList$$module$runner$display_list, methods:methods$$module$runner$display_list, timelineMethods:timelineMethods$$module$runner$display_list};
+  module$runner$display_list.module$exports && (module$runner$display_list = module$runner$display_list.module$exports);
   var module$runner$gradient = {}, tools$$module$runner$gradient = module$tools, color$$module$runner$gradient = module$color, Matrix$$module$runner$gradient = module$runner$matrix, hasOwn$$module$runner$gradient = {}.hasOwnProperty;
   function gradient$$module$runner$gradient(a) {
     return a instanceof gradient$$module$runner$gradient.LinearGradient || a instanceof gradient$$module$runner$gradient.RadialGradient ? a : gradient$$module$runner$gradient.parse(a)
@@ -1452,6 +2077,88 @@
   };
   module$runner$gradient.module$exports = gradient$$module$runner$gradient;
   module$runner$gradient.module$exports && (module$runner$gradient = module$runner$gradient.module$exports);
+  var module$runner$group = {}, DisplayObject$$module$runner$group = module$runner$display_object, displayList$$module$runner$group = module$runner$display_list, tools$$module$runner$group = module$tools, DisplayList$$module$runner$group = displayList$$module$runner$group.DisplayList;
+  function Group$$module$runner$group(a) {
+    a || (a = new DisplayList$$module$runner$group);
+    a.owner = this;
+    this.displayList = a;
+    DisplayObject$$module$runner$group.call(this)
+  }
+  var proto$$module$runner$group = Group$$module$runner$group.prototype = Object.create(DisplayObject$$module$runner$group.prototype);
+  tools$$module$runner$group.mixin(proto$$module$runner$group, displayList$$module$runner$group.methods);
+  proto$$module$runner$group.type = "Group";
+  proto$$module$runner$group.clone = function(a) {
+    var b = new Group$$module$runner$group;
+    a.attributes && b.attr(this.attr());
+    this.children().forEach(function(c) {
+      c.clone && b.addChild(c.clone(a))
+    }, this);
+    return b
+  };
+  module$runner$group.module$exports = Group$$module$runner$group;
+  module$runner$group.module$exports && (module$runner$group = module$runner$group.module$exports);
+  var module$runner$dom_element = {}, Group$$module$runner$dom_element = module$runner$group, tools$$module$runner$dom_element = module$tools, CSS_PREFIX$$module$runner$dom_element = "css_", DOM_PREFIX$$module$runner$dom_element = "dom_";
+  function DOMElement$$module$runner$dom_element(a, b, c) {
+    Group$$module$runner$dom_element.call(this);
+    this.nodeName = a || "";
+    this._domAttributes = {};
+    this._cssStyles = {};
+    this._mutatedDomAttributes = {};
+    this._mutatedCssStyles = {};
+    this.type = "DOMElement";
+    this.setStyles(c);
+    this.setAttributes(b);
+    this.on("removedFromStage", function() {
+      this._mutatedDomAttributes = tools$$module$runner$dom_element.mixin({}, this._domAttributes);
+      this._mutatedCssStyles = tools$$module$runner$dom_element.mixin({}, this._cssStyles)
+    })
+  }
+  var proto$$module$runner$dom_element = DOMElement$$module$runner$dom_element.prototype = Object.create(Group$$module$runner$dom_element.prototype);
+  proto$$module$runner$dom_element.getAttribute = function(a) {
+    return this._domAttributes[a]
+  };
+  proto$$module$runner$dom_element.getStyle = function(a) {
+    return this._cssStyles[a]
+  };
+  proto$$module$runner$dom_element.setAttribute = function(a, b) {
+    this._domAttributes[a] = b;
+    this._mutatedDomAttributes[a] = !0;
+    this.markUpdate();
+    return this
+  };
+  proto$$module$runner$dom_element.setAttributes = function(a) {
+    for(var b in a) {
+      this.setAttribute(b, a[b])
+    }
+    return this
+  };
+  proto$$module$runner$dom_element.setStyles = function(a) {
+    for(var b in a) {
+      this.setStyle(b, a[b])
+    }
+    return this
+  };
+  proto$$module$runner$dom_element.setStyle = function(a, b) {
+    this._cssStyles[a] = b;
+    this._mutatedCssStyles[a] = !0;
+    this.markUpdate();
+    return this
+  };
+  proto$$module$runner$dom_element.composeRenderMessage = function(a) {
+    var a = Group$$module$runner$dom_element.prototype.composeRenderMessage.call(this, a), b, a = a.attributes, c = this._cssStyles, d = this._domAttributes, e = this._mutatedDomAttributes, f = this._mutatedCssStyles;
+    a.nodeName = this.nodeName;
+    for(b in e) {
+      a[DOM_PREFIX$$module$runner$dom_element + b] = d[b]
+    }
+    for(b in f) {
+      a[CSS_PREFIX$$module$runner$dom_element + b] = c[b]
+    }
+    this._mutatedCssStyles = {};
+    this._mutatedDomAttributes = {};
+    return{id:this.id, attributes:a, data:this._getRenderData && this._getRenderData(), type:this.type, offStageType:this._offStageType}
+  };
+  module$runner$dom_element.module$exports = DOMElement$$module$runner$dom_element;
+  module$runner$dom_element.module$exports && (module$runner$dom_element = module$runner$dom_element.module$exports);
   var module$runner$path$curved_path = {}, Point$$module$runner$path$curved_path = module$point, tools$$module$runner$path$curved_path = module$tools, abs$$module$runner$path$curved_path = Math.abs, atan2$$module$runner$path$curved_path = Math.atan2, asin$$module$runner$path$curved_path = Math.asin, ceil$$module$runner$path$curved_path = Math.ceil, cos$$module$runner$path$curved_path = Math.cos, max$$module$runner$path$curved_path = Math.max, min$$module$runner$path$curved_path = Math.min, PI$$module$runner$path$curved_path = 
   Math.PI, pow$$module$runner$path$curved_path = Math.pow, sqrt$$module$runner$path$curved_path = Math.sqrt, sin$$module$runner$path$curved_path = Math.sin, tan$$module$runner$path$curved_path = Math.tan;
   function CurvedPath$$module$runner$path$curved_path() {
@@ -1642,6 +2349,20 @@
     }
     return d
   };
+  CurvedPath$$module$runner$path$curved_path.getBoundsOfCurve = function(a, b, c, d, e, f, g, h) {
+    function j(a) {
+      return pow$$module$runner$path$curved_path(1 - a, 3) * i[n] + 3 * pow$$module$runner$path$curved_path(1 - a, 2) * a * k[n] + 3 * (1 - a) * pow$$module$runner$path$curved_path(a, 2) * l[n] + pow$$module$runner$path$curved_path(a, 3) * m[n]
+    }
+    var i = [a, b], k = [c, d], l = [e, f], m = [g, h], c = [[], []];
+    c[0].push(a);
+    c[1].push(b);
+    c[0].push(m[0]);
+    c[1].push(m[1]);
+    for(var n = 0;2 > n;++n) {
+      a = 6 * i[n] - 12 * k[n] + 6 * l[n], b = -3 * i[n] + 9 * k[n] - 9 * l[n] + 3 * m[n], d = 3 * k[n] - 3 * i[n], 0 == b ? 0 != a && (a = -d / a, 0 < a && 1 > a && c[n].push(j(a))) : (d = pow$$module$runner$path$curved_path(a, 2) - 4 * d * b, 0 > d || (e = (-a + sqrt$$module$runner$path$curved_path(d)) / (2 * b), 0 < e && 1 > e && c[n].push(j(e)), a = (-a - sqrt$$module$runner$path$curved_path(d)) / (2 * b), 0 < a && 1 > a && c[n].push(j(a))))
+    }
+    return{left:min$$module$runner$path$curved_path.apply(null, c[0]), top:min$$module$runner$path$curved_path.apply(null, c[1]), right:max$$module$runner$path$curved_path.apply(null, c[0]), bottom:max$$module$runner$path$curved_path.apply(null, c[1])}
+  };
   CurvedPath$$module$runner$path$curved_path.fromArc = function(a, b, c, d, e, f, g, h, j) {
     if(!(a === h && b === j)) {
       if(0 === c || 0 === d) {
@@ -1653,889 +2374,6 @@
   };
   module$runner$path$curved_path.module$exports = CurvedPath$$module$runner$path$curved_path;
   module$runner$path$curved_path.module$exports && (module$runner$path$curved_path = module$runner$path$curved_path.module$exports);
-  var module$runner$timeline = {}, EventEmitter$$module$runner$timeline = module$event_emitter, tools$$module$runner$timeline = module$tools, round$$module$runner$timeline = Math.round, Timeline$$module$runner$timeline = {currentFrame:0, isPlaying:!0, incrementFrame:function() {
-    this.isPlaying && (this.currentFrame = (this.currentFrame + 1) % (null == this._length ? Infinity : this._length) || 0)
-  }, emitFrame:function() {
-    var a = this.currentFrame, b = this.skipFrame;
-    this.emit("tick", this, a);
-    if(this.isPlaying) {
-      if(null == this.skipFrame || this.skipFrame != a) {
-        this.emit("" + a, this, a), this.emit("advance", this, a)
-      }
-      this.skipFrame === b && (this.skipFrame = null)
-    }
-  }, frames:function(a) {
-    var b, c, d = 0;
-    for(c in a) {
-      b = this.toFrameNumber(c), b > d && (d = b), this.on(b, a[c])
-    }
-    d > this.length() && (this._length = d + 1);
-    return this
-  }, length:function(a) {
-    var b = this._length || (this._length = 0);
-    if(!arguments.length) {
-      return b
-    }
-    for(a *= 1;b-- >= a;) {
-      this.removeAllListeners(b)
-    }
-    this._length = a;
-    return this
-  }, play:function(a) {
-    a *= 1;
-    this.isPlaying = !0;
-    0 <= a && (this.currentFrame = a, this.emit(a + "", this, a), this.skipFrame = a);
-    return this
-  }, stop:function(a) {
-    a *= 1;
-    this.isPlaying = !1;
-    0 <= a && a < this.length() && (this.currentFrame = a, this.emit(a + "", this, a), this.skipFrame = a);
-    return this
-  }, toFrameNumber:function(a) {
-    if(a == +a) {
-      return+a
-    }
-    if("from" == a || "start" == a) {
-      return 0
-    }
-    if("to" == a || "end" == a) {
-      return this._length
-    }
-    a = /^([\d.]+)(\D+)$/.exec(a) || [];
-    switch(a[2]) {
-      case "ms":
-        a[1] /= 1E3;
-      case "s":
-        return round$$module$runner$timeline(a[1] * (this.framerate || this.root.framerate));
-      case "%":
-        return round$$module$runner$timeline(this._length * a[1] / 100) || 0;
-      default:
-        throw Error("Unknown frame format: " + a[2]);
-    }
-  }};
-  module$runner$timeline.module$exports = tools$$module$runner$timeline.mixin(Timeline$$module$runner$timeline, EventEmitter$$module$runner$timeline);
-  module$runner$timeline.module$exports && (module$runner$timeline = module$runner$timeline.module$exports);
-  var module$runner$animation$animation = {}, easing$$module$runner$animation$animation = module$runner$animation$easing, Timeline$$module$runner$animation$animation = module$runner$timeline, tools$$module$runner$animation$animation = module$tools, EventEmitter$$module$runner$animation$animation = module$event_emitter, color$$module$runner$animation$animation = module$color, colorTranslations$$module$runner$animation$animation = module$runner$animation$color_translations, gradientTranslations$$module$runner$animation$animation = 
-  module$runner$animation$gradient_translations, filterTranslations$$module$runner$animation$animation = module$runner$animation$filter_translations, segmentTranslations$$module$runner$animation$animation = module$runner$animation$segment_translations, matrixTranslations$$module$runner$animation$animation = module$runner$animation$matrix_translations, cornerRadiusTranslations$$module$runner$animation$animation = module$runner$animation$corner_radius_translations, mixin$$module$runner$animation$animation = 
-  tools$$module$runner$animation$animation.mixin, isArray$$module$runner$animation$animation = tools$$module$runner$animation$animation.isArray, forEach$$module$runner$animation$animation = tools$$module$runner$animation$animation.forEach, propertyTranslations$$module$runner$animation$animation = Animation$$module$runner$animation$animation.propertyTranslations = {};
-  mixin$$module$runner$animation$animation(propertyTranslations$$module$runner$animation$animation, colorTranslations$$module$runner$animation$animation);
-  mixin$$module$runner$animation$animation(propertyTranslations$$module$runner$animation$animation, gradientTranslations$$module$runner$animation$animation);
-  mixin$$module$runner$animation$animation(propertyTranslations$$module$runner$animation$animation, filterTranslations$$module$runner$animation$animation);
-  mixin$$module$runner$animation$animation(propertyTranslations$$module$runner$animation$animation, segmentTranslations$$module$runner$animation$animation);
-  mixin$$module$runner$animation$animation(propertyTranslations$$module$runner$animation$animation, matrixTranslations$$module$runner$animation$animation);
-  mixin$$module$runner$animation$animation(propertyTranslations$$module$runner$animation$animation, cornerRadiusTranslations$$module$runner$animation$animation);
-  function Animation$$module$runner$animation$animation(a, b, c, d) {
-    if(b instanceof Animation$$module$runner$animation$animation) {
-      return b.clone()
-    }
-    this.subjectsById = {};
-    this.subjects = [];
-    d = this.options = d || {};
-    this.isTimelineBound = !1 !== d.isTimelineBound;
-    this._parseEventProps(d);
-    var e = d.easing;
-    this.easing = "function" == typeof e ? e : easing$$module$runner$animation$animation[e];
-    this.clock = a;
-    this.duration = Math.floor(+b || a.toFrameNumber(b));
-    this.repeat = (d.repeat || 0) - (d.repeat % 1 || 0);
-    this.delay = d.delay && a.toFrameNumber(d.delay) || 0;
-    this.properties = c = tools$$module$runner$animation$animation.mixin({}, c);
-    this._cleanProperties();
-    this.propertyNames = Object.keys(c);
-    this.translations = d.translate ? [d.translate] : [];
-    this._translationData = {};
-    this._getTranslations();
-    this._runTranslations(c, "setupTo");
-    this.propertyNames = Object.keys(c);
-    this.strategy = d.strategy;
-    this._bind()
-  }
-  Animation$$module$runner$animation$animation.prototype = {_cleanProperties:function() {
-    var a = this.properties, b;
-    for(b in a) {
-      isNaN(a[b]) && (!a[b] || !(b in propertyTranslations$$module$runner$animation$animation)) && delete a[b]
-    }
-  }, _bind:function() {
-    var a = this, b = this.delay, c = this.options;
-    this.frame = 0;
-    var d;
-    this.onStep = function(c, f, g) {
-      if(!(0 < b && b--)) {
-        d = d || f;
-        var c = a.duration, h = a.frame = a.isTimelineBound ? a.frame + (f - d || 1) : a.frame + 1;
-        a.step(h / c);
-        a.isTimelineBound && g || h === c ? (d = 0, b = a.delay, a.reset(), 0 < a.repeat-- ? a.play() : a.emit("end", a)) : d = f
-      }
-    };
-    c.subjects && this.addSubjects(c.subjects, c.strategy)
-  }, _getTranslations:function() {
-    for(var a = this.propertyNames, b, c = 0, d = a.length;c < d;c++) {
-      if(a[c] in propertyTranslations$$module$runner$animation$animation) {
-        b = propertyTranslations$$module$runner$animation$animation[a[c]];
-        if(!("function" == typeof b.step && "function" == typeof b.setupFrom && "function" == typeof b.setupTo || "function" == typeof b.setup)) {
-          throw Error("Translation does not implement setup (or setupFrom & setupTo) and step methods.");
-        }
-        this.translations.push({methods:b, data:this._translationData[a[c]] = {}})
-      }
-    }
-  }, _runTranslations:function(a, b) {
-    for(var c, d, e = this.translations.length;e--;) {
-      c = this.translations[e], d = "setupFrom" === b || "setupTo" === b ? c.methods[b] || c.methods.setup : c.methods[b], d.call(c.data, a)
-    }
-  }, play:function() {
-    if(!this.subjects) {
-      throw Error("Unspecified subjects.");
-    }
-    if(this.isPlaying) {
-      return this
-    }
-    this.clock.on(this.isTimelineBound ? "advance" : "tick", this.onStep);
-    0 === this.frame && this.emit("beforebegin", this);
-    this.emit("play", this);
-    this.isPlaying = !0;
-    return this
-  }, pause:function() {
-    this.clock.removeListener(this.isTimelineBound ? "advance" : "tick", this.onStep);
-    this.emit("pause", this);
-    this.isPlaying = !1
-  }, clone:function() {
-    var a = {clock:this.clock, duration:this.duration, easing:this.easing, isTimelineBound:this.isTimelineBound};
-    return new Animation$$module$runner$animation$animation(this.clock, this.duration, mixin$$module$runner$animation$animation({}, this.properties), a)
-  }, _parseEventProps:function(a) {
-    var b, c;
-    for(b in a) {
-      "function" === typeof a[b] && 0 === b.indexOf("on") && (c = b.slice(2).toLowerCase(), this.on(c, a[b]), delete a[b])
-    }
-  }, reset:function() {
-    this.frame = 0;
-    this.isPlaying = !1;
-    this.clock.removeListener(this.isTimelineBound ? "advance" : "tick", this.onStep);
-    return this
-  }, addSubject:function(a, b) {
-    var c = this.propertyNames, d, b = b || this.strategy || "attr";
-    switch(b) {
-      case "attr":
-        d = a.attr();
-        break;
-      case "prop":
-        d = {};
-        for(var e = 0, f;f = c[e++];) {
-          d[f] = a[f]
-        }
-        break;
-      default:
-        d = b.get(a, this.propertyNames)
-    }
-    this._runTranslations(d, "setupFrom");
-    a.id in this.subjectsById || (this.subjectsById[a.id] = !0, this.subjects.push({subject:a, strategy:b, values:d}));
-    return this
-  }, addSubjects:function(a, b) {
-    a = isArray$$module$runner$animation$animation(a) ? a : [a];
-    forEach$$module$runner$animation$animation(a, function(a) {
-      this.addSubject(a, b)
-    }, this);
-    return this
-  }, removeSubject:function(a) {
-    if(a.id in this.subjectsById) {
-      for(var b = 0, c = this.subjects.length;b < c;++b) {
-        if(this.subjects[b].subject === a) {
-          this.subjects.splice(b, 1);
-          break
-        }
-      }
-      delete this.subjectsById[a.id]
-    }
-  }, removeSubjects:function(a) {
-    forEach$$module$runner$animation$animation(a, function(a) {
-      this.removeSubject(a)
-    }, this);
-    return this
-  }, step:function(a) {
-    var b, c, d, e, f, g, h, j = !!this.translations.length;
-    b = this.easing;
-    var i = this.properties, k = this.propertyNames, l = k.length, m = this.subjects, n = {};
-    b && (a = b(a));
-    for(var o = 0, p = m.length;o < p;++o) {
-      e = m[o].values;
-      c = m[o].subject;
-      b = m[o].strategy;
-      h = "attr" === b;
-      for(var q = c._attributes, r = c._mutatedAttributes, s = 0;s < l;++s) {
-        f = k[s], d = e[f], g = i[f], !j && h ? (q[f] = d + (g - d) * a, r[f] = !0) : n[f] = d + (g - d) * a
-      }
-      if(!j && h) {
-        c.markUpdate()
-      }else {
-        if(this._runTranslations(n, "step"), "attr" === b) {
-          c.attr(n)
-        }else {
-          if("prop" === b) {
-            for(f in n) {
-              c[f] = n[f]
-            }
-          }else {
-            b.set(c, n)
-          }
-        }
-      }
-    }
-    return this
-  }};
-  mixin$$module$runner$animation$animation(Animation$$module$runner$animation$animation.prototype, EventEmitter$$module$runner$animation$animation);
-  module$runner$animation$animation.module$exports = Animation$$module$runner$animation$animation;
-  module$runner$animation$animation.module$exports && (module$runner$animation$animation = module$runner$animation$animation.module$exports);
-  var module$runner$animation$keyframe_animation = {}, Animation$$module$runner$animation$keyframe_animation = module$runner$animation$animation, easing$$module$runner$animation$keyframe_animation = module$runner$animation$easing, tools$$module$runner$animation$keyframe_animation = module$tools, EventEmitter$$module$runner$animation$keyframe_animation = module$event_emitter, max$$module$runner$animation$keyframe_animation = Math.max, round$$module$runner$animation$keyframe_animation = Math.round, 
-  hasOwn$$module$runner$animation$keyframe_animation = {}.hasOwnProperty;
-  function KeyframeAnimation$$module$runner$animation$keyframe_animation(a, b, c, d) {
-    d || (d = {});
-    this.clock = a;
-    b = this.duration = +b || a.toFrameNumber(b);
-    this.subjects = [];
-    this.animations = [];
-    this.initialValues = null;
-    this.currentAnimation = -1;
-    this.repeat = d.repeat || 0;
-    this.delay = d.delay && a.toFrameNumber(d.delay) || 0;
-    this.easing = d.easing;
-    this.keyframes = this._convertKeysToFrames(c);
-    this.keys = Object.keys(this.keyframes).map(Number);
-    this.keys.sort(function(a, b) {
-      return a - b
-    });
-    d.subjects && this.addSubjects(d.subjects, d.strategy)
-  }
-  KeyframeAnimation$$module$runner$animation$keyframe_animation.prototype = {play:function(a, b) {
-    a && this.addSubjects(a, b);
-    if(0 > this.currentAnimation) {
-      this.begin()
-    }else {
-      return this.animations[this.currentAnimation].isPlaying = !0, this
-    }
-  }, pause:function() {
-    -1 < this.currentAnimation && (this.animations[this.currentAnimation].isPlaying = !1);
-    return this
-  }, reset:function() {
-    this.animations.forEach(function(a) {
-      a.reset()
-    });
-    this.currentAnimation = -1;
-    return this
-  }, begin:function() {
-    var a = this.keyframes[0], b = this.subjects, c, d;
-    if(a && b.length) {
-      for(var e = 0, f = b.length;e < f;++e) {
-        switch(d = b[e], c = d.strategy, d = d.subject, c) {
-          case "attr":
-            d.attr(a);
-            break;
-          case "prop":
-            for(var g in a) {
-              d[g] = a[g]
-            }
-            break;
-          default:
-            c.set(d, a)
-        }
-      }
-    }
-    this.currentAnimation = 0;
-    this.subjects.forEach(function(a) {
-      this.animations[0].addSubject(a.subject, a.strategy)
-    }, this);
-    this.animations[0].play();
-    return this
-  }, addSubject:function(a, b) {
-    b = b || this.strategy || "attr";
-    if(null == this.initialValues) {
-      switch(b) {
-        case "attr":
-          this.initialValues = a.attr();
-          break;
-        case "prop":
-          var c = Object.keys(a);
-          this.initialValues = {};
-          for(var d = 0, e;e = c[d++];) {
-            this.initialValues[e] = a[e]
-          }
-          break;
-        default:
-          this.initialValues = b.get(a, this.propertyNames)
-      }
-    }
-    this.subjects.push({subject:a, strategy:b});
-    if(this.animations.length) {
-      c = 0;
-      for(d = this.animations.length;c < d;++c) {
-        this.animations[c].addSubject(a, b)
-      }
-    }else {
-      this._fillInProperties(), this._createAnimations()
-    }
-    return this
-  }, addSubjects:function(a, b) {
-    var c = this, a = tools$$module$runner$animation$keyframe_animation.isArray(a) ? a : [a];
-    a.forEach(function(a) {
-      c.addSubject(a, b)
-    });
-    return this
-  }, removeSubject:function(a) {
-    for(var b = 0, c = this.subjects.length;b < c;++b) {
-      if(this.subjects[b].subject === a) {
-        this.subjects.splice(b, 1);
-        for(var d = 0, e = this.animations.length;d < e;++d) {
-          this.animations[d].removeSubject(a)
-        }
-      }
-    }
-  }, removeSubjects:function(a) {
-    a.forEach(tools$$module$runner$animation$keyframe_animation.hitch(this, "removeSubject"));
-    return this
-  }, _createAnimations:function() {
-    var a, b = 0, c, d = this.animations, e = this.keyframes;
-    this.keys.forEach(function(f, g) {
-      var h;
-      if(0 !== f) {
-        a = f - b;
-        b += a;
-        h = new Animation$$module$runner$animation$keyframe_animation(this.clock, a, e[f], {easing:this.easing, strategy:this.strategy, delay:1 === g ? this.delay : null});
-        if(c) {
-          c.on("end", this, function() {
-            this.currentAnimation++;
-            this.subjects.forEach(function(a) {
-              h.addSubject(a.subject, a.strategy)
-            }, this);
-            h.play()
-          })
-        }
-        d.push(h);
-        c = h;
-        if(g == this.keys.length - 1) {
-          h.on("end", this, function() {
-            Infinity === this.repeat || 0 < --this.repeat ? (this.reset(), this.play()) : this.emit("end", this)
-          })
-        }
-      }
-    }, this)
-  }, _fillInProperties:function() {
-    var a = this.initialValues, b = this.duration, c = this.keys, d = this.keyframes, e, f = {};
-    c.forEach(function(a) {
-      e = d[a];
-      for(var b in e) {
-        e.hasOwnProperty(b) && (f[b] = !0)
-      }
-    });
-    c.forEach(function(g, h) {
-      var j, i, k, l, m;
-      e = d[g];
-      for(m in f) {
-        if(!hasOwn$$module$runner$animation$keyframe_animation.call(e, m)) {
-          a: {
-            j = m;
-            for(i = h;i--;) {
-              if(hasOwn$$module$runner$animation$keyframe_animation.call(d[c[i]], j)) {
-                j = c[i];
-                break a
-              }
-            }
-            j = null
-          }
-          a: {
-            i = m;
-            k = h;
-            for(l = c.length;k < l;++k) {
-              if(hasOwn$$module$runner$animation$keyframe_animation.call(d[c[k]], i)) {
-                i = c[k];
-                break a
-              }
-            }
-            i = null
-          }
-          k = j && d[j][m] || a[m];
-          l = i && d[i][m];
-          if(null == k) {
-            throw Error("No initial value specified for property: " + m);
-          }
-          null == l && (l = k, i = b);
-          e[m] = l * (g - j) / (i - j)
-        }
-      }
-    })
-  }, _convertKeysToFrames:function(a) {
-    for(var b, c, d = 0, e = this.clock, f = this.duration, g = Object.keys(a), h = Object.create(null), j = 0, i = g.length;j < i;j++) {
-      b = g[j], c = b == +b ? b : /^(?:from|start)$/.test(b) ? 0 : /^(?:to|end)$/.test(b) ? f : /^\d+%$/.test(b) ? f * parseFloat(b) / 100 : e.toFrameNumber(b), h[c] = a[b], c > d && (d = c)
-    }
-    d > this.duration && (this.duration = d);
-    return h
-  }};
-  tools$$module$runner$animation$keyframe_animation.mixin(KeyframeAnimation$$module$runner$animation$keyframe_animation.prototype, EventEmitter$$module$runner$animation$keyframe_animation);
-  module$runner$animation$keyframe_animation.module$exports = KeyframeAnimation$$module$runner$animation$keyframe_animation;
-  module$runner$animation$keyframe_animation.module$exports && (module$runner$animation$keyframe_animation = module$runner$animation$keyframe_animation.module$exports);
-  var module$runner$display_object = {}, EventEmitter$$module$runner$display_object = module$event_emitter, tools$$module$runner$display_object = module$tools, Matrix$$module$runner$display_object = module$runner$matrix, Point$$module$runner$display_object = module$point, Animation$$module$runner$display_object = module$runner$animation$animation, KeyframeAnimation$$module$runner$display_object = module$runner$animation$keyframe_animation, filter$$module$runner$display_object = module$runner$filter$builtin, 
-  accessor$$module$runner$display_object = tools$$module$runner$display_object.descriptorAccessor, data$$module$runner$display_object = tools$$module$runner$display_object.descriptorData, getter$$module$runner$display_object = tools$$module$runner$display_object.getter, uid$$module$runner$display_object = 1, atan2$$module$runner$display_object = Math.atan2, PI$$module$runner$display_object = Math.PI, isfinite$$module$runner$display_object = isFinite;
-  function getRotation$$module$runner$display_object() {
-    var a = this._matrix, b = atan2$$module$runner$display_object(a.b, a.a), a = -atan2$$module$runner$display_object(a.c, a.d);
-    return b > a ? b : a
-  }
-  function setRotation$$module$runner$display_object(a) {
-    if(isfinite$$module$runner$display_object(a)) {
-      var a = +a % (2 * PI$$module$runner$display_object) || 0, b = this._matrix, c = b.transformPoint(this.origin), d = c.x, c = c.y;
-      b.tx -= d;
-      b.ty -= c;
-      b.rotate(a - this.rotation);
-      b.tx += d;
-      b.ty += c;
-      this._owner._mutatedAttributes.matrix = !0
-    }
-  }
-  function getMatrix$$module$runner$display_object() {
-    var a, b = this._matrix.clone(), c = this._scaleX, d = this._scaleY;
-    if(1 !== c || 1 !== d) {
-      a = b.transformPoint(this._origin), b.tx -= a.x, b.ty -= a.y, b.scale(c, d), b.tx += a.x, b.ty += a.y
-    }
-    return b
-  }
-  function setMatrix$$module$runner$display_object(a) {
-    var b = this._matrix;
-    b.a = a.a;
-    b.b = a.b;
-    b.c = a.c;
-    b.d = a.d;
-    b.tx = a.tx;
-    b.ty = a.ty
-  }
-  function getX$$module$runner$display_object() {
-    return this.matrix.tx
-  }
-  function setX$$module$runner$display_object(a) {
-    this._matrix.tx = 1 === this._scaleX ? a : this._matrix.tx + (a - this.matrix.tx);
-    this._owner._mutatedAttributes.matrix = !0
-  }
-  function getY$$module$runner$display_object() {
-    return this.matrix.ty
-  }
-  function setY$$module$runner$display_object(a) {
-    this._matrix.ty = 1 === this._scaleY ? a : this._matrix.ty + (a - this.matrix.ty);
-    this._owner._mutatedAttributes.matrix = !0
-  }
-  function getScaleX$$module$runner$display_object() {
-    return this._scaleX
-  }
-  function setScaleX$$module$runner$display_object(a) {
-    isfinite$$module$runner$display_object(a) && (this._scaleX = +a, this._owner._mutatedAttributes.matrix = !0)
-  }
-  function getScaleY$$module$runner$display_object() {
-    return this._scaleY
-  }
-  function setScaleY$$module$runner$display_object(a) {
-    isfinite$$module$runner$display_object(a) && (this._scaleY = +a, this._owner._mutatedAttributes.matrix = !0)
-  }
-  function getScale$$module$runner$display_object() {
-    return(this.scaleX + this.scaleY) / 2
-  }
-  function setScale$$module$runner$display_object(a) {
-    this.scaleX = this.scaleY = a
-  }
-  var getOpacity$$module$runner$display_object = getter$$module$runner$display_object("_opacity");
-  function setOpacity$$module$runner$display_object(a) {
-    this._opacity = 1 < a ? 1 : 0 > a ? 0 : +a
-  }
-  function getOrigin$$module$runner$display_object() {
-    return this._origin.clone()
-  }
-  function setOrigin$$module$runner$display_object(a) {
-    var b = this._origin;
-    b.x = a.x;
-    b.y = a.y
-  }
-  function getCursor$$module$runner$display_object() {
-    return this._cursor
-  }
-  function setCursor$$module$runner$display_object(a) {
-    a ? /^(?:default|pointer|wait|progress)$/.test(a) && (this._cursor = a) : this._cursor = null
-  }
-  function getFilters$$module$runner$display_object() {
-    return this._filters.slice(0)
-  }
-  function setFilters$$module$runner$display_object(a) {
-    a ? (a = [].concat(a), this._filters = a = a.map(function(a) {
-      return a instanceof filter$$module$runner$display_object.BaseFilter ? a : new filter$$module$runner$display_object[a]
-    })) : this._filters.length = 0
-  }
-  function setClip$$module$runner$display_object(a) {
-    var b = this._owner;
-    b._mutatedAttributes.clipId = !0;
-    if(a) {
-      if(a.stage && !a._isOffStage) {
-        throw Error("You cannot set a clip that has been previously added to the stage");
-      }
-      if(!("composeRenderMessage" in a)) {
-        throw Error("Not a valid clip element");
-      }
-      b.stage && DisplayObject$$module$runner$display_object.registerOffStageObj(b, a, b.stage, "clip");
-      this._clipId = a.id;
-      this._clip = a
-    }else {
-      this._clip && DisplayObject$$module$runner$display_object.unregisterOffStageObj(b, this._clip), this._clipId = this._clip = null
-    }
-  }
-  function getClip$$module$runner$display_object() {
-    return this._clip
-  }
-  function setMask$$module$runner$display_object(a) {
-    var b = this._owner;
-    b._mutatedAttributes.maskId = !0;
-    if(a) {
-      if(a.stage && !a._isOffStage) {
-        throw Error("You cannot set a mask that has been previously added to the stage");
-      }
-      if(!("composeRenderMessage" in a)) {
-        throw Error("Not a valid mask");
-      }
-      b.stage && DisplayObject$$module$runner$display_object.registerOffStageObj(b, a, b.stage, "mask");
-      this._maskId = a.id;
-      this._mask = a
-    }else {
-      this._mask && DisplayObject$$module$runner$display_object.unregisterOffStageObj(b, this._mask), this._maskId = this._mask = null
-    }
-  }
-  function getMask$$module$runner$display_object() {
-    return this._mask
-  }
-  function DisplayObject$$module$runner$display_object() {
-    Object.defineProperty(this, "id", {value:uid$$module$runner$display_object++});
-    this._attributes = Object.create(null, {_owner:data$$module$runner$display_object(this), _matrix:data$$module$runner$display_object(new Matrix$$module$runner$display_object), matrix:accessor$$module$runner$display_object(getMatrix$$module$runner$display_object, setMatrix$$module$runner$display_object, !0), _filters:data$$module$runner$display_object([], !0), filters:accessor$$module$runner$display_object(getFilters$$module$runner$display_object, setFilters$$module$runner$display_object, !0), 
-    _opacity:data$$module$runner$display_object(1, !0), opacity:accessor$$module$runner$display_object(getOpacity$$module$runner$display_object, setOpacity$$module$runner$display_object, !0), _origin:data$$module$runner$display_object(new Point$$module$runner$display_object), origin:accessor$$module$runner$display_object(getOrigin$$module$runner$display_object, setOrigin$$module$runner$display_object, !0), rotation:accessor$$module$runner$display_object(getRotation$$module$runner$display_object, 
-    setRotation$$module$runner$display_object, !0), _scaleX:data$$module$runner$display_object(1, !0), _scaleY:data$$module$runner$display_object(1, !0), scale:accessor$$module$runner$display_object(getScale$$module$runner$display_object, setScale$$module$runner$display_object, !0), scaleX:accessor$$module$runner$display_object(getScaleX$$module$runner$display_object, setScaleX$$module$runner$display_object, !0), scaleY:accessor$$module$runner$display_object(getScaleY$$module$runner$display_object, 
-    setScaleY$$module$runner$display_object, !0), x:accessor$$module$runner$display_object(getX$$module$runner$display_object, setX$$module$runner$display_object, !0), y:accessor$$module$runner$display_object(getY$$module$runner$display_object, setY$$module$runner$display_object, !0), clip:accessor$$module$runner$display_object(getClip$$module$runner$display_object, setClip$$module$runner$display_object, !0), _clip:data$$module$runner$display_object(null, !0), _clipId:data$$module$runner$display_object(null, 
-    !0), mask:accessor$$module$runner$display_object(getMask$$module$runner$display_object, setMask$$module$runner$display_object, !0), _mask:data$$module$runner$display_object(null, !0), _maskId:data$$module$runner$display_object(null, !0), cursor:accessor$$module$runner$display_object(getCursor$$module$runner$display_object, setCursor$$module$runner$display_object, !0), _cursor:data$$module$runner$display_object(null, !0), fillRule:data$$module$runner$display_object("inherit", !0), visible:data$$module$runner$display_object(!0, 
-    !0)});
-    this._isOffStage = !1;
-    this._renderAttributes = {matrix:"matrix", filters:"_filters", opacity:"_opacity", clipId:"_clipId", maskId:"_maskId", cursor:"_cursor", fillRule:"fillRule", visible:"visible"};
-    this._mutatedAttributes = tools$$module$runner$display_object.mixin({}, this._renderAttributes)
-  }
-  DisplayObject$$module$runner$display_object.registerOffStageObj = function(a, b, c, d, e) {
-    if(c && (b.stage = c, b._offStageType = d, b._isOffStage = !0, c.registry.needsDraw[b.id] = b, c.registry.needsInsertion[b.id] = b, c.registry.displayObjects[b.id] = b, "Movie" === b.type && c.registry.movies.add(b), e || (b.parent = c, b._offStageUseCount = b._offStageUseCount ? b._offStageUseCount + 1 : 1, a.once("removedFromStage", function() {
-      1 === b._offStageUseCount ? DisplayObject$$module$runner$display_object.unregisterOffStageObj(a, b, !0) : b._offStageUseCount--
-    })), b._activate(c), e = b.displayList && b.displayList.children)) {
-      for(var f = 0, g = e.length;f < g;++f) {
-        var h = e[f];
-        h && DisplayObject$$module$runner$display_object.registerOffStageObj(a, h, c, d, !0)
-      }
-    }
-  };
-  DisplayObject$$module$runner$display_object.unregisterOffStageObj = function(a, b, c) {
-    if(!c) {
-      if(0 < --b._offStageUseCount) {
-        return
-      }
-      delete b._offStageUseCount
-    }
-    if(c = b.stage) {
-      if(b.emit("removedFromStage"), c.registry.needsDraw[b.id] = b, delete c.registry.needsInsertion[b.id], delete c.registry.displayObjects[b.id], delete b.stage, b.markUpdate("shapeData"), delete b._offStageType, b._isOffStage = !1, b = b.displayList && b.displayList.children) {
-        for(var c = 0, d = b.length;c < d;++c) {
-          var e = b[c];
-          e && DisplayObject$$module$runner$display_object.unregisterOffStageObj(a, e, !0)
-        }
-      }
-    }
-  };
-  var proto$$module$runner$display_object = DisplayObject$$module$runner$display_object.prototype = {parent:null, type:"DisplayObject", _activate:function(a) {
-    this.stage = a;
-    this._mutatedAttributes = tools$$module$runner$display_object.mixin({}, this._renderAttributes);
-    var b = this._attributes, c = b._clip;
-    c && DisplayObject$$module$runner$display_object.registerOffStageObj(this, c, a, "clip");
-    (b = b._mask) && DisplayObject$$module$runner$display_object.registerOffStageObj(this, b, a, "mask");
-    this.parent._isOffStage && (this._offStageType = this.parent._offStageType, this._isOffStage = !0);
-    a = a.registry;
-    a.displayObjects[this.id] = this;
-    a.needsInsertion[this.id] = this;
-    this.markUpdate();
-    this.emit("addedToStage")
-  }, _deactivate:function() {
-    var a = this.stage;
-    if(a) {
-      var a = a.registry, b = this.id;
-      this.stage = void 0;
-      a.needsDraw[b] = this;
-      delete a.displayObjects[b];
-      delete a.needsInsertion[b]
-    }
-    this.emit("removedFromStage")
-  }, attr:function(a, b) {
-    var c, d, e = this._attributes;
-    switch(arguments.length) {
-      case 0:
-        c = {};
-        for(d in e) {
-          "_" != d.charAt(0) && (c[d] = e[d])
-        }
-        return c;
-      case 1:
-        if("string" == typeof a) {
-          return a in e && "_" != a.charAt(0) ? e[a] : void 0
-        }
-        for(d in a) {
-          d in e && "_" != d.charAt(0) && (e[d] = a[d], this._mutatedAttributes[d] = !0)
-        }
-        break;
-      case 2:
-        a in e && "_" != a.charAt(0) && (e[a] = b, this._mutatedAttributes[a] = !0)
-    }
-    this.markUpdate();
-    return this
-  }, getComputed:function(a) {
-    var b = {top:0, right:0, bottom:0, left:0, width:0, height:0};
-    return"size" === a ? b : b[a]
-  }, destroy:function() {
-    return this.removeAllListeners().remove()
-  }, mask:function() {
-  }, blendMode:function() {
-  }, markUpdate:function() {
-    var a = this.stage;
-    a && (a.registry.needsDraw[this.id] = this);
-    return this
-  }, addTo:function(a, b) {
-    1 === arguments.length ? a.addChild(this) : a.addChild(this, b);
-    return this
-  }, addAfter:function(a) {
-    var b = a.parent;
-    b.addChild(this, b.getIndexOfChild(a) + 1);
-    return this
-  }, addBefore:function(a) {
-    var b = a.parent;
-    b.addChild(this, b.getIndexOfChild(a));
-    return this
-  }, remove:function(a) {
-    var b = this.parent;
-    b && b.removeChild(this, a);
-    return this
-  }, setOrigin:function(a, b) {
-    return this.attr("origin", {x:a, y:b})
-  }, composeRenderMessage:function(a) {
-    a || (a = {attributes:{}, id:this.id});
-    var b = a.attributes || {}, c = this._mutatedAttributes, d = this._renderAttributes, e = this._attributes, f;
-    for(f in c) {
-      f in d && (b[f] = e[d[f]])
-    }
-    this._mutatedAttributes = {};
-    a.attributes = b;
-    a.data = this._getRenderData && this._getRenderData();
-    a.type = this.type;
-    a.offStageType = this._offStageType;
-    return a
-  }, animate:function(a, b, c) {
-    var d = a;
-    if(!(d instanceof Animation$$module$runner$display_object || d instanceof KeyframeAnimation$$module$runner$display_object)) {
-      d = c && c.clock || this.stage;
-      c || (c = {});
-      if(!d) {
-        for(d = this;d && !d.emitFrame;) {
-          d = d.parent
-        }
-      }
-      if(!d) {
-        return this.once("addedToStage", function() {
-          this.animate(a, b, c)
-        }), this
-      }
-      d = new Animation$$module$runner$display_object(d, a, b, c)
-    }
-    d.addSubject(this).play();
-    return this
-  }};
-  tools$$module$runner$display_object.mixin(proto$$module$runner$display_object, EventEmitter$$module$runner$display_object);
-  module$runner$display_object.module$exports = DisplayObject$$module$runner$display_object;
-  module$runner$display_object.module$exports && (module$runner$display_object = module$runner$display_object.module$exports);
-  var module$runner$display_list = {}, tools$$module$runner$display_list = module$tools, DisplayObject$$module$runner$display_list = module$runner$display_object, isArray$$module$runner$display_list = tools$$module$runner$display_list.isArray, max$$module$runner$display_list = Math.max, min$$module$runner$display_list = Math.min;
-  function getAncestors$$module$runner$display_list(a) {
-    var b = [];
-    do {
-      b.push(a), a = a.parent
-    }while(a);
-    return b
-  }
-  function inThisArray$$module$runner$display_list(a) {
-    return-1 !== this.indexOf(a)
-  }
-  function DisplayList$$module$runner$display_list(a) {
-    this.children = [];
-    this.owner = a
-  }
-  DisplayList$$module$runner$display_list.prototype = {add:function(a, b) {
-    var c = isArray$$module$runner$display_list(a), d = this.owner, e = getAncestors$$module$runner$display_list(d), f = c ? a.length : 1;
-    if(c || -1 === e.indexOf(a)) {
-      if((!c || !a.some(inThisArray$$module$runner$display_list, e)) && 0 !== f) {
-        var e = this.children, g = e.length, b = 1 < arguments.length ? min$$module$runner$display_list(b >>> 0, g) : g;
-        c ? e.splice.apply(e, [b, 0].concat(a)) : e.splice(b, 0, a);
-        0 < b && (e[b - 1].next = c ? a[0] : a);
-        for(var c = b + f, f = d.stage, h, g = b;g < c;g += 1) {
-          a = h || e[g], (h = a.parent) && h.displayList.remove(a), h = e[g + 1], a.next = h, a.parent = d, f && a._activate(f)
-        }
-      }
-    }
-  }, clear:function() {
-    for(var a = this.children, b = 0, c;c = a[b];b += 1) {
-      c.stage && c._deactivate(), c.next = c.parent = void 0
-    }
-    a.length = 0
-  }, contains:function(a) {
-    var b = this.children;
-    return-1 !== b.indexOf(a) || b.some(function(b) {
-      return b.displayList && b.displayList.contains(a)
-    })
-  }, remove:function(a) {
-    var b = this.children, c = b.indexOf(a);
-    if(-1 === c) {
-      return!1
-    }
-    0 < c && (b[c - 1].next = a.next);
-    a.next = a.parent = void 0;
-    a.stage && a._deactivate();
-    b.splice(c, 1);
-    return!0
-  }};
-  function activate$$module$runner$display_list(a) {
-    DisplayObject$$module$runner$display_list.prototype._activate.call(this, a);
-    for(var b = this.displayList.children, c = 0, d = b.length;c < d;c += 1) {
-      b[c]._activate(a)
-    }
-  }
-  function deactivate$$module$runner$display_list() {
-    DisplayObject$$module$runner$display_list.prototype._deactivate.call(this);
-    for(var a = this.displayList.children, b = 0, c = a.length;b < c;b += 1) {
-      a[b]._deactivate()
-    }
-  }
-  var methods$$module$runner$display_list = {_activate:activate$$module$runner$display_list, _deactivate:deactivate$$module$runner$display_list, addChild:function(a, b) {
-    1 === arguments.length ? this.displayList.add(a) : this.displayList.add(a, b);
-    return this
-  }, children:function(a) {
-    var b = this.displayList;
-    return arguments.length ? (b.clear(), b.add(a), this) : b.children.slice()
-  }, clear:function() {
-    this.displayList.clear();
-    return this
-  }, getComputed:function(a) {
-    var b = this.displayList.children;
-    if("top" === a || "right" === a || "bottom" === a || "left" === a) {
-      var c = "top" === a || "bottom" === a ? "y" : "x", d = "top" === a || "left" === a ? min$$module$runner$display_list : max$$module$runner$display_list;
-      return tools$$module$runner$display_list.reduce(b, function(b, f, g) {
-        f = f.attr(c) + f.getComputed(a);
-        return 0 === g ? f : d(b, f)
-      }, 0)
-    }
-    b = tools$$module$runner$display_list.reduce(b, function(a, b, c) {
-      var d = b.getComputed("size"), j = b.attr("x"), b = b.attr("y"), c = 0 === c, i = b + d.top;
-      a.top = c ? i : min$$module$runner$display_list(a.top, i);
-      i = j + d.right;
-      a.right = c ? i : max$$module$runner$display_list(a.right, i);
-      b += d.bottom;
-      a.bottom = c ? b : max$$module$runner$display_list(a.bottom, b);
-      d = j + d.left;
-      a.left = c ? d : min$$module$runner$display_list(a.left, d);
-      return a
-    }, {top:0, right:0, bottom:0, left:0, width:0, height:0});
-    b.height = b.bottom - b.top;
-    b.width = b.right - b.left;
-    return"size" === a ? b : b[a]
-  }, getIndexOfChild:function(a) {
-    return this.displayList.children.indexOf(a)
-  }, removeChild:function(a) {
-    this.displayList.remove(a);
-    return this
-  }}, timelineMethods$$module$runner$display_list = tools$$module$runner$display_list.mixin({}, methods$$module$runner$display_list);
-  timelineMethods$$module$runner$display_list._activate = function(a) {
-    activate$$module$runner$display_list.call(this, a);
-    a && a.registry.movies.add(this)
-  };
-  timelineMethods$$module$runner$display_list._deactivate = function() {
-    this.stage && this.stage.registry.movies.remove(this);
-    deactivate$$module$runner$display_list.call(this)
-  };
-  module$runner$display_list.module$exports = {DisplayList:DisplayList$$module$runner$display_list, methods:methods$$module$runner$display_list, timelineMethods:timelineMethods$$module$runner$display_list};
-  module$runner$display_list.module$exports && (module$runner$display_list = module$runner$display_list.module$exports);
-  var module$runner$group = {}, DisplayObject$$module$runner$group = module$runner$display_object, displayList$$module$runner$group = module$runner$display_list, tools$$module$runner$group = module$tools, DisplayList$$module$runner$group = displayList$$module$runner$group.DisplayList;
-  function Group$$module$runner$group(a) {
-    a || (a = new DisplayList$$module$runner$group);
-    a.owner = this;
-    this.displayList = a;
-    DisplayObject$$module$runner$group.call(this)
-  }
-  var proto$$module$runner$group = Group$$module$runner$group.prototype = Object.create(DisplayObject$$module$runner$group.prototype);
-  tools$$module$runner$group.mixin(proto$$module$runner$group, displayList$$module$runner$group.methods);
-  proto$$module$runner$group.type = "Group";
-  proto$$module$runner$group.clone = function(a) {
-    var b = new Group$$module$runner$group;
-    a.attributes && b.attr(this.attr());
-    this.children().forEach(function(c) {
-      c.clone && b.addChild(c.clone(a))
-    }, this);
-    return b
-  };
-  module$runner$group.module$exports = Group$$module$runner$group;
-  module$runner$group.module$exports && (module$runner$group = module$runner$group.module$exports);
-  var module$runner$dom_element = {}, Group$$module$runner$dom_element = module$runner$group, tools$$module$runner$dom_element = module$tools, CSS_PREFIX$$module$runner$dom_element = "css_", DOM_PREFIX$$module$runner$dom_element = "dom_";
-  function DOMElement$$module$runner$dom_element(a, b, c) {
-    Group$$module$runner$dom_element.call(this);
-    this.nodeName = a || "";
-    this._domAttributes = {};
-    this._cssStyles = {};
-    this._mutatedDomAttributes = {};
-    this._mutatedCssStyles = {};
-    this.type = "DOMElement";
-    this.setStyles(c);
-    this.setAttributes(b);
-    this.on("removedFromStage", function() {
-      this._mutatedDomAttributes = tools$$module$runner$dom_element.mixin({}, this._domAttributes);
-      this._mutatedCssStyles = tools$$module$runner$dom_element.mixin({}, this._cssStyles)
-    })
-  }
-  var proto$$module$runner$dom_element = DOMElement$$module$runner$dom_element.prototype = Object.create(Group$$module$runner$dom_element.prototype);
-  proto$$module$runner$dom_element.getAttribute = function(a) {
-    return this._domAttributes[a]
-  };
-  proto$$module$runner$dom_element.getStyle = function(a) {
-    return this._cssStyles[a]
-  };
-  proto$$module$runner$dom_element.setAttribute = function(a, b) {
-    this._domAttributes[a] = b;
-    this._mutatedDomAttributes[a] = !0;
-    this.markUpdate();
-    return this
-  };
-  proto$$module$runner$dom_element.setAttributes = function(a) {
-    for(var b in a) {
-      this.setAttribute(b, a[b])
-    }
-    return this
-  };
-  proto$$module$runner$dom_element.setStyles = function(a) {
-    for(var b in a) {
-      this.setStyle(b, a[b])
-    }
-    return this
-  };
-  proto$$module$runner$dom_element.setStyle = function(a, b) {
-    this._cssStyles[a] = b;
-    this._mutatedCssStyles[a] = !0;
-    this.markUpdate();
-    return this
-  };
-  proto$$module$runner$dom_element.composeRenderMessage = function(a) {
-    var a = Group$$module$runner$dom_element.prototype.composeRenderMessage.call(this, a), b, a = a.attributes, c = this._cssStyles, d = this._domAttributes, e = this._mutatedDomAttributes, f = this._mutatedCssStyles;
-    a.nodeName = this.nodeName;
-    for(b in e) {
-      a[DOM_PREFIX$$module$runner$dom_element + b] = d[b]
-    }
-    for(b in f) {
-      a[CSS_PREFIX$$module$runner$dom_element + b] = c[b]
-    }
-    this._mutatedCssStyles = {};
-    this._mutatedDomAttributes = {};
-    return{id:this.id, attributes:a, data:this._getRenderData && this._getRenderData(), type:this.type, offStageType:this._offStageType}
-  };
-  module$runner$dom_element.module$exports = DOMElement$$module$runner$dom_element;
-  module$runner$dom_element.module$exports && (module$runner$dom_element = module$runner$dom_element.module$exports);
   var module$runner$text_span = {}, DisplayObject$$module$runner$text_span = module$runner$display_object, color$$module$runner$text_span = module$color, gradient$$module$runner$text_span = module$runner$gradient, tools$$module$runner$text_span = module$tools, accessor$$module$runner$text_span = tools$$module$runner$text_span.descriptorAccessor, data$$module$runner$text_span = tools$$module$runner$text_span.descriptorData, getter$$module$runner$text_span = tools$$module$runner$text_span.getter, parseColor$$module$runner$text_span = 
   color$$module$runner$text_span.parse;
   function getTextFillColor$$module$runner$text_span() {
@@ -2685,6 +2523,69 @@
   };
   module$runner$text.module$exports = Text$$module$runner$text;
   module$runner$text.module$exports && (module$runner$text = module$runner$text.module$exports);
+  var module$runner$timeline = {}, EventEmitter$$module$runner$timeline = module$event_emitter, tools$$module$runner$timeline = module$tools, round$$module$runner$timeline = Math.round, Timeline$$module$runner$timeline = {currentFrame:0, isPlaying:!0, incrementFrame:function() {
+    this.currentFrame = (this.currentFrame + 1) % (null == this._length ? Infinity : this._length) || 0;
+    return this
+  }, emitFrame:function() {
+    var a = this.currentFrame, b = this.skipFrame;
+    this.emit("tick", this, a);
+    if(this.isPlaying) {
+      if(null == this.skipFrame || this.skipFrame != a) {
+        this.emit("" + a, this, a), this.emit("advance", this, a)
+      }
+      this.skipFrame === b && (this.skipFrame = null)
+    }
+  }, frames:function(a) {
+    var b, c, d = 0;
+    for(c in a) {
+      b = this.toFrameNumber(c), b > d && (d = b), this.on(b, a[c])
+    }
+    d > this.length() && (this._length = d + 1);
+    return this
+  }, length:function(a) {
+    var b = this._length || (this._length = 0);
+    if(!arguments.length) {
+      return b
+    }
+    for(a *= 1;b-- >= a;) {
+      this.removeAllListeners(b)
+    }
+    this._length = a;
+    return this
+  }, play:function(a) {
+    a *= 1;
+    this.isPlaying = !0;
+    0 <= a && (this.currentFrame = a, this.emit(a + "", this, a), this.skipFrame = a);
+    return this
+  }, stop:function(a) {
+    a *= 1;
+    this.isPlaying = !1;
+    0 <= a && a < this.length() && (this.currentFrame = a, this.emit(a + "", this, a), this.skipFrame = a);
+    return this
+  }, toFrameNumber:function(a) {
+    if(a == +a) {
+      return+a
+    }
+    if("from" == a || "start" == a) {
+      return 0
+    }
+    if("to" == a || "end" == a) {
+      return this._length
+    }
+    a = /^([\d.]+)(\D+)$/.exec(a) || [];
+    switch(a[2]) {
+      case "ms":
+        a[1] /= 1E3;
+      case "s":
+        return round$$module$runner$timeline(a[1] * (this.framerate || this.root.framerate));
+      case "%":
+        return round$$module$runner$timeline(this._length * a[1] / 100) || 0;
+      default:
+        throw Error("Unknown frame format: " + a[2]);
+    }
+  }};
+  module$runner$timeline.module$exports = tools$$module$runner$timeline.mixin(Timeline$$module$runner$timeline, EventEmitter$$module$runner$timeline);
+  module$runner$timeline.module$exports && (module$runner$timeline = module$runner$timeline.module$exports);
   var module$uri = {};
   function URI$$module$uri(a, b, c, d, e) {
     this.scheme = a || void 0;
@@ -2746,21 +2647,21 @@
     if(!a) {
       throw Error("AssetRequest needs at least a valid url.");
     }
-    c = a.resources;
-    b = a.loadLevel;
+    b = a.resources;
+    c = a.loadLevel;
     if("string" === typeof a) {
-      c = [new AssetResource$$module$asset$asset_request(a)]
+      b = [new AssetResource$$module$asset$asset_request(a)]
     }else {
       if(isArray$$module$asset$asset_request(a)) {
-        c = tools$$module$asset$asset_request.map(a, function(a) {
+        b = tools$$module$asset$asset_request.map(a, function(a) {
           return new AssetResource$$module$asset$asset_request(a)
         })
       }else {
-        if(c && c.src || "string" === typeof c) {
-          c = [new AssetResource$$module$asset$asset_request(c)]
+        if(b && b.src || "string" === typeof b) {
+          b = [new AssetResource$$module$asset$asset_request(b)]
         }else {
-          if(isArray$$module$asset$asset_request(c) && c.length) {
-            c = tools$$module$asset$asset_request.map(c, function(a) {
+          if(isArray$$module$asset$asset_request(b) && b.length) {
+            b = tools$$module$asset$asset_request.map(b, function(a) {
               return new AssetResource$$module$asset$asset_request(a)
             })
           }else {
@@ -2769,9 +2670,9 @@
         }
       }
     }
-    this.resources = c;
+    this.resources = b;
     this.id = a.id;
-    this.loadLevel = b || null
+    this.loadLevel = c || null
   }
   module$asset$asset_request.module$exports = AssetRequest$$module$asset$asset_request;
   module$asset$asset_request.module$exports && (module$asset$asset_request = module$asset$asset_request.module$exports);
@@ -2848,12 +2749,14 @@
     return domAudio$$module$asset$audio_handler.canPlayType(a) ? a : ""
   };
   AudioHandler$$module$asset$audio_handler.prototype = Object.create(AssetHandler$$module$asset$audio_handler.prototype);
-  AudioHandler$$module$asset$audio_handler.prototype.loadResource = function(a, b) {
-    function c() {
+  AudioHandler$$module$asset$audio_handler.prototype.loadResource = function(a, b, c) {
+    function d() {
       b()
     }
-    var d, e = this.id, f = this.request.loadLevel || "canplay", g = getPlayableMimeType$$module$asset$audio_handler(a.type), h = a.src;
-    !g || this.hasInitiatedLoad ? this.resourcesExpectedLength-- : (this.hasInitiatedLoad = !0, d = document.createElement("audio"), d.setAttribute("id", e), d.setAttribute("type", g), d.src = h, d.load(), this.registerElement(d), d.addEventListener(events$$module$asset$audio_handler[f], c, !1))
+    var e = this.id, f = this.request.loadLevel || "canplay", g = getPlayableMimeType$$module$asset$audio_handler(a.type), h = a.src;
+    !g || this.hasInitiatedLoad ? this.resourcesExpectedLength-- : (this.hasInitiatedLoad = !0, a = document.createElement("audio"), a.setAttribute("id", e), a.setAttribute("type", g), a.src = h, a.load(), this.registerElement(a), a.addEventListener(events$$module$asset$audio_handler[f], d, !1), a.addEventListener("error", function() {
+      c("Could not load video (" + h + ").")
+    }, !1))
   };
   module$asset$audio_handler.module$exports = AudioHandler$$module$asset$audio_handler;
   module$asset$audio_handler.module$exports && (module$asset$audio_handler = module$asset$audio_handler.module$exports);
@@ -2932,7 +2835,7 @@
   };
   module$asset$font_handler.module$exports = FontHandler$$module$asset$font_handler;
   module$asset$font_handler.module$exports && (module$asset$font_handler = module$asset$font_handler.module$exports);
-  var module$asset$video_handler = {}, AssetHandler$$module$asset$video_handler = module$asset$asset_handler, domVideo$$module$asset$video_handler;
+  var module$asset$video_handler = {}, AssetHandler$$module$asset$video_handler = module$asset$asset_handler, VIDEO_MIME_TYPES$$module$asset$video_handler = AssetHandler$$module$asset$video_handler.MIME_TYPES.video, domVideo$$module$asset$video_handler;
   try {
     domVideo$$module$asset$video_handler = document.createElement("video")
   }catch(e$$module$asset$video_handler) {
@@ -2941,17 +2844,28 @@
   function VideoHandler$$module$asset$video_handler() {
     AssetHandler$$module$asset$video_handler.apply(this, arguments)
   }
+  var getPlayableMimeType$$module$asset$video_handler = VideoHandler$$module$asset$video_handler.getPlayableMimeType = function(a) {
+    if(!domVideo$$module$asset$video_handler) {
+      return""
+    }
+    if(domVideo$$module$asset$video_handler.canPlayType(a)) {
+      return a
+    }
+    var b = VIDEO_MIME_TYPES$$module$asset$video_handler[a];
+    if(b && domVideo$$module$asset$video_handler.canPlayType(b)) {
+      return b
+    }
+    a = "video/" + a;
+    return domVideo$$module$asset$video_handler.canPlayType(a) ? a : ""
+  };
   VideoHandler$$module$asset$video_handler.prototype = Object.create(AssetHandler$$module$asset$video_handler.prototype);
   VideoHandler$$module$asset$video_handler.prototype.loadResource = function(a, b, c) {
     function d() {
       b({width:e.videoWidth, height:e.videoHeight})
     }
-    var e, f = this.id, g = this.request.loadLevel || "canplay", h = a.type, a = a.src;
-    !domVideo$$module$asset$video_handler.canPlayType(h) || this.hasInitiatedLoad ? this.resourcesExpectedLength-- : (this.hasInitiatedLoad = !0, e = document.createElement("video"), e.setAttribute("id", f), e.setAttribute("type", h), e.src = a, this.registerElement(e), e.addEventListener(events$$module$asset$video_handler[g], d, !1), e.addEventListener("error", function() {
-      c("Could not load video.")
-    }, !1), e.addEventListener("ended", function() {
-    }, !1), e.addEventListener("play", function() {
-    }, !1), e.addEventListener("pause", function() {
+    var e, f = this.id, g = this.request.loadLevel || "canplay", h = getPlayableMimeType$$module$asset$video_handler(a.type), j = a.src;
+    !h || this.hasInitiatedLoad ? this.resourcesExpectedLength-- : (this.hasInitiatedLoad = !0, e = document.createElement("video"), e.setAttribute("id", f), e.setAttribute("type", h), e.src = j, this.registerElement(e), e.addEventListener(events$$module$asset$video_handler[g], d, !1), e.addEventListener("error", function() {
+      c("Could not load video (" + j + ").")
     }, !1))
   };
   module$asset$video_handler.module$exports = VideoHandler$$module$asset$video_handler;
@@ -2959,9 +2873,6 @@
   var module$asset$asset_controller = {}, tools$$module$asset$asset_controller = module$tools, EventEmitter$$module$asset$asset_controller = module$event_emitter, AssetRequest$$module$asset$asset_controller = module$asset$asset_request, FontHandler$$module$asset$asset_controller = module$asset$font_handler, VideoHandler$$module$asset$asset_controller = module$asset$video_handler, AudioHandler$$module$asset$asset_controller = module$asset$audio_handler, BitmapHandler$$module$asset$asset_controller = 
   module$asset$bitmap_handler, RawHandler$$module$asset$asset_controller = module$asset$raw_handler;
   AssetController$$module$asset$asset_controller.assets = {};
-  AssetController$$module$asset$asset_controller.hasVideoSupport = function() {
-    return!!domVideo.canPlayType
-  };
   function AssetController$$module$asset$asset_controller() {
   }
   var handlers$$module$asset$asset_controller = AssetController$$module$asset$asset_controller.handlers = {Bitmap:BitmapHandler$$module$asset$asset_controller, Font:FontHandler$$module$asset$asset_controller, Audio:AudioHandler$$module$asset$asset_controller, Video:VideoHandler$$module$asset$asset_controller, Raw:RawHandler$$module$asset$asset_controller};
@@ -2998,12 +2909,12 @@
     delete this._worker
   }, init:function(a) {
     var b = URI$$module$bootstrapper$context$worker$context.parse(this.runnerUrl);
-    b.fragment = encodeURIComponent(JSON.stringify(a));
+    -1 === ("" + b).indexOf("blob") && (b.fragment = encodeURIComponent(JSON.stringify(a)));
     var c = this;
     (this._worker = new Worker(b)).onmessage = function(a) {
       a = a.data;
       c.emit("message", a);
-      "scriptLoaded" === a.command && c.emit("scriptLoaded", a.url)
+      a.command === "scriptLoaded" && c.emit("scriptLoaded", a.url)
     }
   }, notifyRunner:function(a) {
     this._worker.postMessage(a)
@@ -3056,7 +2967,7 @@
     }) : b.urls ? a(b.urls, function() {
       b.code && d.run(b.code);
       c.emit("load")
-    }) : b.code && d.run(b.code)
+    }) : b.code && (d.run(b.code), c.emit("load"))
   }, initRenderer:function() {
     this._sendOptions();
     return this
@@ -3106,7 +3017,7 @@
         this.assetController.destroy(b.id);
         break;
       case "message":
-        this.emit("message", b);
+        "category" in a ? this.emit("message:" + a.category, b) : this.emit("message", b);
         break;
       case "isReady":
         this.isRunnerListening = !0, this._sendOptions(), this._onRunnerContextReady(), this.emit("start")
@@ -3139,8 +3050,9 @@
     }
     a = this.renderer.getOffset();
     "undefined" !== typeof window && this.post("env", {windowHeight:window.innerHeight, windowWidth:window.innerWidth, windowScrollX:Math.max(document.body.scrollLeft, document.documentElement.scrollLeft), windowScrollY:Math.max(document.body.scrollTop, document.documentElement.scrollTop), offsetX:a.left, offsetY:a.top})
-  }, sendMessage:function(a) {
-    return this.post("message", a)
+  }, sendMessage:function(a, b) {
+    2 > arguments.length ? this.post("message", a) : this.runnerContext.notifyRunner({command:"message", category:a, data:b});
+    return this
   }, stop:function(a) {
     return this.post("stop", a)
   }, unfreeze:function() {
@@ -3183,6 +3095,9 @@
         null != c ? a.setAttribute(basicAttributeMap$$module$renderer$svg$svg[d], c) : null === c && a.removeAttribute(basicAttributeMap$$module$renderer$svg$svg[d])
       }else {
         switch(d) {
+          case "interactive":
+            a.style.pointerEvents = c ? "inherit" : "none";
+            break;
           case "fontFamily":
             c = fontIDs$$module$renderer$svg$svg[c] || c;
             null != c ? a.setAttribute("font-family", c) : null === c && a.removeAttribute("font-family");
@@ -3197,20 +3112,22 @@
       }
     }
   }};
-  function SvgRenderer$$module$renderer$svg$svg(a, b, c, d, e) {
+  function SvgRenderer$$module$renderer$svg$svg(a, b, c, d) {
+    d = d || {};
     this.width = b;
     this.height = c;
-    this.allowEventDefaults = !!d;
-    var f = this.svg = new Svg$$module$renderer$svg$svg(a, b, c);
+    this.allowEventDefaults = !!d.allowEventDefaults;
+    var e = this.svg = new Svg$$module$renderer$svg$svg(a, b, c);
     this.definitions = Object.create(null);
     eventTypes$$module$renderer$svg$svg.forEach(function(a) {
-      f.root.addEventListener(a, this, !1)
+      e.root.addEventListener(a, this, !1)
     }, this);
     document.addEventListener("touchmove", Boolean, !1);
     document.addEventListener("keyup", this, !1);
     document.addEventListener("keydown", this, !1);
     document.addEventListener("keypress", this, !1);
-    this._setupFPSLog(e)
+    this._setupFPSLog(d.fpsLog);
+    d.disableContextMenu && this.config({item:"disableContextMenu", value:!0})
   }
   var proto$$module$renderer$svg$svg = SvgRenderer$$module$renderer$svg$svg.prototype = tools$$module$renderer$svg$svg.mixin({}, EventEmitter$$module$renderer$svg$svg, eventHandlers$$module$renderer$svg$svg), typesToTags$$module$renderer$svg$svg = {Bitmap:"image", Group:"g", Movie:"g", Path:"path", Text:"text", TextSpan:"tspan", Video:"foreignObject", Mask:"mask"};
   proto$$module$renderer$svg$svg.config = function(a) {
@@ -3220,7 +3137,12 @@
         this.svg.root.setAttribute("shape-rendering", b ? "crispEdges" : "auto");
         break;
       case "backgroundColor":
-        this.svg.root.style.backgroundColor = color$$module$renderer$svg$svg(b).rgba()
+        this.svg.root.style.backgroundColor = color$$module$renderer$svg$svg(b).rgba();
+        break;
+      case "disableContextMenu":
+        this.svg.root.oncontextmenu = b ? function() {
+          return!1
+        } : null
     }
   };
   proto$$module$renderer$svg$svg.render = function(a) {
@@ -3328,27 +3250,44 @@
   };
   proto$$module$renderer$svg$svg.drawText = function(a, b) {
     var c = b.attributes;
-    !1 !== c.selectable ? cssClasses$$module$renderer$svg$svg.add(a, "selectable") : cssClasses$$module$renderer$svg$svg.remove(a, "selectable");
+    void 0 !== c.selectable && (!1 !== c.selectable ? cssClasses$$module$renderer$svg$svg.add(a, "selectable") : cssClasses$$module$renderer$svg$svg.remove(a, "selectable"));
     a.setAttributeNS(xlink$$module$renderer$svg$svg, "text-anchor", "start");
     null != c.textOrigin && a.setAttribute("alignment-baseline", "top" === c.textOrigin ? "hanging" : "");
     a.style.textAnchor = "start"
   };
   proto$$module$renderer$svg$svg.drawVideo = function(a, b) {
-    var c = b.attributes, d = b.id, e = AssetController$$module$renderer$svg$svg.assets[d];
+    var c, d = b.attributes;
+    c = b.id;
+    var e = AssetController$$module$renderer$svg$svg.assets[c], f = d.playing;
     if("undefined" === typeof e) {
-      throw Error("asset <" + d + "> is unknown.");
+      throw Error("asset <" + c + "> is unknown.");
     }
-    var d = c.width || 100, f = c.height || 100, g = c.matrix || {tx:0, ty:0};
-    a.setAttribute("x", g.tx);
-    a.setAttribute("y", g.ty);
-    a.setAttribute("width", d);
-    a.setAttribute("height", f);
-    a.setAttribute("preserveAspectRatio", "none");
     a.removeAttribute("transform");
-    e.setAttribute("width", d);
-    e.setAttribute("height", f);
+    "matrix" in d && (a.setAttribute("x", d.matrix.tx), a.setAttribute("y", d.matrix.ty));
+    "width" in d && (a.setAttribute("width", d.width), e.setAttribute("width", d.width));
+    "height" in d && (a.setAttribute("height", d.height), e.setAttribute("height", d.height));
+    a.setAttribute("preserveAspectRatio", "none");
+    if(d.prepareUserEvent && "ontouchstart" in document) {
+      var g = function() {
+        e.play();
+        e.pause();
+        document.removeEventListener("touchstart", g, true)
+      };
+      document.addEventListener("touchstart", g, !0)
+    }
+    "volume" in d && (e.volume = min$$module$renderer$svg$svg(max$$module$renderer$svg$svg(+d.volume || 0, 0), 1));
+    if("time" in d) {
+      c = e.volume;
+      e.volume = 0;
+      try {
+        e.currentTime = +d.time || 0.01
+      }catch(h) {
+      }
+      e.volume = c
+    }
+    !0 === f && e.play();
+    !1 === f && e.pause();
     e.setAttribute("controls", "controls");
-    c.autoplay && e.play();
     a.appendChild(e)
   };
   proto$$module$renderer$svg$svg.drawAudio = function(a, b) {
@@ -3387,7 +3326,7 @@
     a._root && ("css_width" in d && /px$/.test(d.css_width) && a._root.setAttribute("width", d.css_width), "css_height" in d && /px$/.test(d.css_height) && (a._root.setAttribute("height", d.css_height), a._root._height = d.css_height));
     a._isBSDOMElement = !0;
     for(var e in d) {
-      /^dom_/.test(e) ? "dom_innerHTML" === e ? a.innerHTML = (d[e] || "").replace(/\{\{prefix\}\}/g, fontPrefix$$module$renderer$svg$svg) : a.setAttribute(e.slice(4), d[e]) : /^css_/.test(e) && "undefined" !== typeof d[e] && (a.style[e.slice(4)] = d[e].toString().replace(/\{\{prefix\}\}/g, fontPrefix$$module$renderer$svg$svg))
+      /^dom_/.test(e) ? "dom_innerHTML" === e ? a.innerHTML = (d[e] || "").replace(/\{\{prefix\}\}/g, fontPrefix$$module$renderer$svg$svg) : a.setAttribute(e.slice(4), d[e]) : /^css_/.test(e) && null != d[e] && (a.style[e.slice(4)] = d[e].toString().replace(/\{\{prefix\}\}/g, fontPrefix$$module$renderer$svg$svg))
     }
     if("dom_innerHTML" in d && a.parentNode) {
       d = a;
@@ -3642,69 +3581,7 @@
   };
   module$runner$asset_display_object.module$exports = AssetDisplayObject$$module$runner$asset_display_object;
   module$runner$asset_display_object.module$exports && (module$runner$asset_display_object = module$runner$asset_display_object.module$exports);
-  var module$runner$audio = {}, AssetDisplayObject$$module$runner$audio = module$runner$asset_display_object, tools$$module$runner$audio = module$tools, data$$module$runner$audio = tools$$module$runner$audio.descriptorData, accessor$$module$runner$audio = tools$$module$runner$audio.descriptorAccessor, getter$$module$runner$audio = tools$$module$runner$audio.getter;
-  function getTime$$module$runner$audio() {
-    return this._time
-  }
-  function setTime$$module$runner$audio(a) {
-    a = +a;
-    "number" === typeof a && !isNaN(a) && isFinite(a) && (this._time = a)
-  }
-  function getVolume$$module$runner$audio() {
-    return this._volume
-  }
-  function setVolume$$module$runner$audio(a) {
-    null != a && (this._volume = a = Math.min(Math.max(+a, 0), 1))
-  }
-  function Audio$$module$runner$audio(a, b, c, d) {
-    d || (d = {});
-    AssetDisplayObject$$module$runner$audio.call(this, a, b, c);
-    this.type = "Audio";
-    Object.defineProperties(this._attributes, {playing:data$$module$runner$audio(!!d.autoplay, !0, !0), prepareUserEvent:data$$module$runner$audio(!1, !0, !0), volume:accessor$$module$runner$audio(getVolume$$module$runner$audio, setVolume$$module$runner$audio, !0), _volume:data$$module$runner$audio(1, !0, !0), time:accessor$$module$runner$audio(getTime$$module$runner$audio, setTime$$module$runner$audio, !0), _time:data$$module$runner$audio(0, !0, !0)});
-    a = this._renderAttributes;
-    a.playing = "playing";
-    a.volume = "_volume";
-    a.time = "_time";
-    a.prepareUserEvent = "prepareUserEvent";
-    this.request(b)
-  }
-  var parentPrototype$$module$runner$audio = AssetDisplayObject$$module$runner$audio.prototype, parentPrototypeDestroy$$module$runner$audio = parentPrototype$$module$runner$audio.destroy, proto$$module$runner$audio = Audio$$module$runner$audio.prototype = Object.create(parentPrototype$$module$runner$audio);
-  proto$$module$runner$audio.clone = function() {
-    return new Audio$$module$runner$audio(this._loader, this._request)
-  };
-  proto$$module$runner$audio.destroy = function() {
-    parentPrototypeDestroy$$module$runner$audio.call(this);
-    this._loader.destroyAsset(this);
-    return this
-  };
-  proto$$module$runner$audio.notify = function(a, b) {
-    switch(a) {
-      case "load":
-        this.emitAsync("load", this);
-        break;
-      case "error":
-        this.emitAsync("error", Error(b.error))
-    }
-    return this
-  };
-  proto$$module$runner$audio.play = function(a) {
-    void 0 !== a && this.attr("time", a);
-    return this.attr("playing", !0)
-  };
-  proto$$module$runner$audio.prepareUserEvent = function() {
-    return this.attr("prepareUserEvent", !0)
-  };
-  proto$$module$runner$audio.pause = function() {
-    return this.attr("playing", !1)
-  };
-  proto$$module$runner$audio.stop = function() {
-    return this.attr({playing:!1, time:0})
-  };
-  proto$$module$runner$audio.getComputed = function() {
-  };
-  module$runner$audio.module$exports = Audio$$module$runner$audio;
-  module$runner$audio.module$exports && (module$runner$audio = module$runner$audio.module$exports);
-  var module$runner$bitmap = {}, AssetDisplayObject$$module$runner$bitmap = module$runner$asset_display_object, tools$$module$runner$bitmap = module$tools, data$$module$runner$bitmap = tools$$module$runner$bitmap.descriptorData, accessor$$module$runner$bitmap = tools$$module$runner$bitmap.descriptorAccessor, getSource$$module$runner$bitmap = tools$$module$runner$bitmap.getter("_source");
+  var module$runner$bitmap = {}, AssetDisplayObject$$module$runner$bitmap = module$runner$asset_display_object, tools$$module$runner$bitmap = module$tools, Point$$module$runner$bitmap = module$point, data$$module$runner$bitmap = tools$$module$runner$bitmap.descriptorData, accessor$$module$runner$bitmap = tools$$module$runner$bitmap.descriptorAccessor, getSource$$module$runner$bitmap = tools$$module$runner$bitmap.getter("_source");
   function setSource$$module$runner$bitmap(a) {
     this._source = a;
     this._owner.request(a)
@@ -3750,14 +3627,12 @@
     }
     return this
   };
-  proto$$module$runner$bitmap.getComputed = function(a) {
-    var b, c = "size" === a && {top:0, right:0, bottom:0, left:0}, d = this._attributes._naturalWidth, e = this._attributes._naturalHeight, f = this.attr("width"), g = this.attr("height"), h = d / e, d = f || (null != g ? h * g : d) || 0, e = g || (null != f ? f / h : e) || 0;
-    "width" === a || "right" === a ? b = d : c && (c.right = c.width = d);
-    "height" === a || "bottom" === a ? b = e : c && (c.bottom = c.height = e);
-    if("top" === a || "left" === a) {
-      b = 0
-    }
-    return c || b
+  proto$$module$runner$bitmap.getBoundingBox = function(a) {
+    var b = {top:0, right:0, bottom:0, left:0}, c = this._attributes._naturalWidth, d = this._attributes._naturalHeight, e = this.attr("width"), f = this.attr("height"), g = c / d, c = e || (null != f ? g * f : c) || 0, e = f || (null != e ? e / g : d) || 0;
+    b.right = b.width = c;
+    b.bottom = b.height = e;
+    a && (d = a.transformPoint(new Point$$module$runner$bitmap(0, 0)), a = a.transformPoint(new Point$$module$runner$bitmap(c, e)), b.top = d.y, b.left = d.x, b.right = a.x, b.bottom = a.y);
+    return b
   };
   module$runner$bitmap.module$exports = Bitmap$$module$runner$bitmap;
   module$runner$bitmap.module$exports && (module$runner$bitmap = module$runner$bitmap.module$exports);
@@ -3785,6 +3660,73 @@
   };
   module$runner$font_family.module$exports = FontFamily$$module$runner$font_family;
   module$runner$font_family.module$exports && (module$runner$font_family = module$runner$font_family.module$exports);
+  var module$runner$media_display_object = {}, AssetDisplayObject$$module$runner$media_display_object = module$runner$asset_display_object, tools$$module$runner$media_display_object = module$tools, data$$module$runner$media_display_object = tools$$module$runner$media_display_object.descriptorData, accessor$$module$runner$media_display_object = tools$$module$runner$media_display_object.descriptorAccessor;
+  function getTime$$module$runner$media_display_object() {
+    return this._time
+  }
+  function setTime$$module$runner$media_display_object(a) {
+    a = +a;
+    "number" === typeof a && !isNaN(a) && isFinite(a) && (this._time = a)
+  }
+  function getVolume$$module$runner$media_display_object() {
+    return this._volume
+  }
+  function setVolume$$module$runner$media_display_object(a) {
+    null != a && (this._volume = a = Math.min(Math.max(+a, 0), 1))
+  }
+  function MediaDisplayObject$$module$runner$media_display_object(a, b, c) {
+    AssetDisplayObject$$module$runner$media_display_object.call(this, a, b, c);
+    Object.defineProperties(this._attributes, {playing:data$$module$runner$media_display_object(!1, !0, !0), prepareUserEvent:data$$module$runner$media_display_object(!1, !0, !0), volume:accessor$$module$runner$media_display_object(getVolume$$module$runner$media_display_object, setVolume$$module$runner$media_display_object, !0), _volume:data$$module$runner$media_display_object(1, !0, !0), time:accessor$$module$runner$media_display_object(getTime$$module$runner$media_display_object, setTime$$module$runner$media_display_object, 
+    !0), _time:data$$module$runner$media_display_object(0, !0, !0)});
+    a = this._renderAttributes;
+    a.playing = "playing";
+    a.volume = "_volume";
+    a.time = "_time";
+    a.prepareUserEvent = "prepareUserEvent"
+  }
+  var parentPrototype$$module$runner$media_display_object = AssetDisplayObject$$module$runner$media_display_object.prototype, parentPrototypeDestroy$$module$runner$media_display_object = parentPrototype$$module$runner$media_display_object.destroy, proto$$module$runner$media_display_object = MediaDisplayObject$$module$runner$media_display_object.prototype = Object.create(parentPrototype$$module$runner$media_display_object);
+  proto$$module$runner$media_display_object.destroy = function() {
+    parentPrototypeDestroy$$module$runner$media_display_object.call(this);
+    this._loader.destroyAsset(this);
+    return this
+  };
+  proto$$module$runner$media_display_object.notify = function(a, b) {
+    switch(a) {
+      case "load":
+        this.emitAsync("load", this);
+        break;
+      case "error":
+        this.emitAsync("error", Error(b.error))
+    }
+    return this
+  };
+  proto$$module$runner$media_display_object.play = function(a) {
+    void 0 !== a && this.attr("time", a);
+    return this.attr("playing", !0)
+  };
+  proto$$module$runner$media_display_object.prepareUserEvent = function() {
+    return this.attr("prepareUserEvent", !0)
+  };
+  proto$$module$runner$media_display_object.pause = function() {
+    return this.attr("playing", !1)
+  };
+  proto$$module$runner$media_display_object.stop = function() {
+    return this.attr({playing:!1, time:0})
+  };
+  module$runner$media_display_object.module$exports = MediaDisplayObject$$module$runner$media_display_object;
+  module$runner$media_display_object.module$exports && (module$runner$media_display_object = module$runner$media_display_object.module$exports);
+  var module$runner$audio = {}, MediaDisplayObject$$module$runner$audio = module$runner$media_display_object;
+  function Audio$$module$runner$audio(a, b, c) {
+    MediaDisplayObject$$module$runner$audio.call(this, a, b, c);
+    this.type = "Audio";
+    this.request(b)
+  }
+  var proto$$module$runner$audio = Audio$$module$runner$audio.prototype = Object.create(MediaDisplayObject$$module$runner$audio.prototype);
+  proto$$module$runner$audio.clone = function() {
+    return new Audio$$module$runner$audio(this._loader, this._request)
+  };
+  module$runner$audio.module$exports = Audio$$module$runner$audio;
+  module$runner$audio.module$exports && (module$runner$audio = module$runner$audio.module$exports);
   var module$runner$movie = {}, AssetDisplayObject$$module$runner$movie = module$runner$asset_display_object, displayList$$module$runner$movie = module$runner$display_list, Timeline$$module$runner$movie = module$runner$timeline, tools$$module$runner$movie = module$tools, DisplayList$$module$runner$movie = displayList$$module$runner$movie.DisplayList;
   function Movie$$module$runner$movie(a, b, c, d) {
     AssetDisplayObject$$module$runner$movie.call(this, null, b, c);
@@ -3806,7 +3748,8 @@
   module$runner$movie.module$exports && (module$runner$movie = module$runner$movie.module$exports);
   var module$runner$path$path = {}, Point$$module$runner$path$path = module$point, CurvedPath$$module$runner$path$path = module$runner$path$curved_path, SegmentHelper$$module$runner$path$path = module$segment_helper, DisplayObject$$module$runner$path$path = module$runner$display_object, tools$$module$runner$path$path = module$tools, color$$module$runner$path$path = module$color, gradient$$module$runner$path$path = module$runner$gradient, Bitmap$$module$runner$path$path = module$runner$bitmap, accessor$$module$runner$path$path = 
   tools$$module$runner$path$path.descriptorAccessor, data$$module$runner$path$path = tools$$module$runner$path$path.descriptorData, getter$$module$runner$path$path = tools$$module$runner$path$path.getter, isArray$$module$runner$path$path = tools$$module$runner$path$path.isArray, parseColor$$module$runner$path$path = color$$module$runner$path$path.parse, exportToPath$$module$runner$path$path = SegmentHelper$$module$runner$path$path.exportToPath, validTokens$$module$runner$path$path = SegmentHelper$$module$runner$path$path.validTokens, 
-  parsePath$$module$runner$path$path = SegmentHelper$$module$runner$path$path.parsePath, parseCommandList$$module$runner$path$path = SegmentHelper$$module$runner$path$path.parseCommandList, abs$$module$runner$path$path = Math.abs, cos$$module$runner$path$path = Math.cos, pow$$module$runner$path$path = Math.pow, PI$$module$runner$path$path = Math.PI, PI2$$module$runner$path$path = 2 * PI$$module$runner$path$path, sin$$module$runner$path$path = Math.sin, sqrt$$module$runner$path$path = Math.sqrt;
+  parsePath$$module$runner$path$path = SegmentHelper$$module$runner$path$path.parsePath, parseCommandList$$module$runner$path$path = SegmentHelper$$module$runner$path$path.parseCommandList, abs$$module$runner$path$path = Math.abs, cos$$module$runner$path$path = Math.cos, pow$$module$runner$path$path = Math.pow, PI$$module$runner$path$path = Math.PI, PI2$$module$runner$path$path = 2 * PI$$module$runner$path$path, sin$$module$runner$path$path = Math.sin, sqrt$$module$runner$path$path = Math.sqrt, min$$module$runner$path$path = 
+  Math.min, max$$module$runner$path$path = Math.max;
   function getFillColor$$module$runner$path$path() {
     return this._fillColor
   }
@@ -3825,16 +3768,7 @@
   function setFillImage$$module$runner$path$path(a) {
     var b = this._owner;
     b._mutatedAttributes.fillImageId = !0;
-    if(a) {
-      if(!(a instanceof Bitmap$$module$runner$path$path)) {
-        throw Error("img is not instance of Bitmap.");
-      }
-      b.stage && DisplayObject$$module$runner$path$path.registerOffStageObj(b, a, b.stage, "fillImage");
-      this._fillImageId = a.id;
-      this._fillImage = a
-    }else {
-      this._fillImage && DisplayObject$$module$runner$path$path.unregisterOffStageObj(b, this._fillImage), this._fillImageId = this._fillImage = null
-    }
+    a ? (b.stage && DisplayObject$$module$runner$path$path.registerOffStageObj(b, a, b.stage, "fillImage"), this._fillImageId = a.id, this._fillImage = a) : (this._fillImage && DisplayObject$$module$runner$path$path.unregisterOffStageObj(b, this._fillImage), this._fillImageId = this._fillImage = null)
   }
   function getFillRepeat$$module$runner$path$path() {
     return this._fillRepeat
@@ -4175,7 +4109,7 @@
   proto$$module$runner$path$path.morphSegmentsTo = function(a, b, c) {
     this.toCurves();
     a.toCurves();
-    var d = Math.max(a._segments.length, this._segments.length);
+    var d = max$$module$runner$path$path(a._segments.length, this._segments.length);
     this.toCurves(d);
     a.toCurves(d);
     return this.animate(b, {segments:a.attr("segments")}, c)
@@ -4240,28 +4174,35 @@
     }
     return e
   };
-  proto$$module$runner$path$path.getComputed = function(a) {
-    for(var b = {top:0, right:0, bottom:0, left:0, width:0, height:0}, c = CurvedPath$$module$runner$path$path.toCurves(this.attr("segments").slice()), d = !0, e = Math.max, f = Math.min, g = 0, h;h = c[g];g += 1) {
-      if("closePath" !== h[0]) {
-        for(var j = 1, i = h.length;j < i;j += 2) {
-          var k = h[j], l = h[j + 1];
-          b.top = d ? l : f(b.top, l);
-          b.right = d ? k : e(b.right, k);
-          b.bottom = d ? l : e(b.bottom, l);
-          b.left = d ? k : f(b.left, k);
-          d = !1
-        }
+  proto$$module$runner$path$path.getBoundingBox = function(a) {
+    function b(b, c) {
+      var d = new Point$$module$runner$path$path(b, c);
+      return a ? a.transformPoint(d) : d
+    }
+    for(var c = [], d = [], e = CurvedPath$$module$runner$path$path.toCurves(this.attr("segments").slice()), f = new Point$$module$runner$path$path(0, 0), g = 0, h;h = e[g++];) {
+      switch(h[0]) {
+        case "moveTo":
+          var j = b(h[1], h[2]), f = j;
+          c.push(j.x);
+          d.push(j.y);
+          break;
+        case "curveTo":
+          var j = b(h[1], h[2]), i = b(h[3], h[4]);
+          h = b(h[5], h[6]);
+          f = CurvedPath$$module$runner$path$path.getBoundsOfCurve(f.x, f.y, j.x, j.y, i.x, i.y, h.x, h.y);
+          c.push(f.left, f.right);
+          d.push(f.top, f.bottom);
+          f = h
       }
     }
-    k = this.attr("x");
-    l = this.attr("y");
-    b.top += l;
-    b.right += k;
-    b.bottom += l;
-    b.left += k;
-    b.width = b.right - b.left;
-    b.height = b.bottom - b.top;
-    return"size" === a ? b : b[a]
+    e = {};
+    e.left = min$$module$runner$path$path.apply(null, c);
+    e.right = max$$module$runner$path$path.apply(null, c);
+    e.top = min$$module$runner$path$path.apply(null, d);
+    e.bottom = max$$module$runner$path$path.apply(null, d);
+    e.width = e.right - e.left;
+    e.height = e.bottom - e.top;
+    return e
   };
   module$runner$path$path.module$exports = Path$$module$runner$path$path;
   module$runner$path$path.module$exports && (module$runner$path$path = module$runner$path$path.module$exports);
@@ -4443,31 +4384,24 @@
   };
   module$runner$sprite.module$exports = Sprite$$module$runner$sprite;
   module$runner$sprite.module$exports && (module$runner$sprite = module$runner$sprite.module$exports);
-  var module$runner$video = {}, AssetDisplayObject$$module$runner$video = module$runner$asset_display_object, tools$$module$runner$video = module$tools, data$$module$runner$video = tools$$module$runner$video.descriptorData, accessor$$module$runner$video = tools$$module$runner$video.descriptorAccessor, getter$$module$runner$video = tools$$module$runner$video.getter;
-  function Video$$module$runner$video(a, b, c, d) {
-    d || (d = {});
-    AssetDisplayObject$$module$runner$video.call(this, a, b, c);
+  var module$runner$video = {}, MediaDisplayObject$$module$runner$video = module$runner$media_display_object, tools$$module$runner$video = module$tools, data$$module$runner$video = tools$$module$runner$video.descriptorData;
+  function Video$$module$runner$video(a, b, c) {
+    MediaDisplayObject$$module$runner$video.call(this, a, b, c);
     this.type = "Video";
-    Object.defineProperties(this._attributes, {height:data$$module$runner$video(d.height, !0, !0), width:data$$module$runner$video(d.width, !0, !0), autoplay:data$$module$runner$video(d.autoplay || !1, !0, !0)});
+    Object.defineProperties(this._attributes, {height:data$$module$runner$video(0, !0, !0), width:data$$module$runner$video(0, !0, !0)});
     a = this._renderAttributes;
     a.height = "height";
     a.width = "width";
-    a.autoplay = "autoplay";
     this.request(b)
   }
-  var parentPrototype$$module$runner$video = AssetDisplayObject$$module$runner$video.prototype, parentPrototypeDestroy$$module$runner$video = parentPrototype$$module$runner$video.destroy, proto$$module$runner$video = Video$$module$runner$video.prototype = Object.create(parentPrototype$$module$runner$video);
+  var proto$$module$runner$video = Video$$module$runner$video.prototype = Object.create(MediaDisplayObject$$module$runner$video.prototype);
   proto$$module$runner$video.clone = function() {
     return new Video$$module$runner$video(this._loader, this._request)
-  };
-  proto$$module$runner$video.destroy = function() {
-    parentPrototypeDestroy$$module$runner$video.call(this);
-    this._loader.destroyAsset(this);
-    return this
   };
   proto$$module$runner$video.notify = function(a, b) {
     switch(a) {
       case "load":
-        this.attr({width:b.width, height:b.height});
+        "undefined" !== typeof b && this.attr({width:b.width, height:b.height});
         this.emitAsync("load", this);
         break;
       case "error":
@@ -4475,20 +4409,26 @@
     }
     return this
   };
-  proto$$module$runner$video.getComputed = function(a) {
-    var b, c = "size" === a && {top:0, right:0, bottom:0, left:0};
-    "width" === a || "right" === a ? b = this.attr("width") || 0 : c && (c.right = c.width = this.attr("width") || 0);
-    "height" === a || "bottom" === a ? b = this.attr("height") || 0 : c && (c.bottom = c.height = this.attr("height") || 0);
-    if("top" === a || "left" === a) {
-      b = 0
+  proto$$module$runner$video.getBoundingBox = function(a) {
+    var b = {top:0, right:0, bottom:0, left:0};
+    b.right = b.width = this.attr("width") || 0;
+    b.bottom = b.height = this.attr("height") || 0;
+    if(a) {
+      var c = a.transformPoint({x:0, y:0}), a = a.transformPoint({x:b.right, y:b.bottom});
+      b.top = c.y;
+      b.left = c.x;
+      b.right = a.x;
+      b.bottom = a.y;
+      b.width = b.right - b.left;
+      b.height = b.bottom - b.top
     }
-    return c || b
+    return b
   };
   module$runner$video.module$exports = Video$$module$runner$video;
   module$runner$video.module$exports && (module$runner$video = module$runner$video.module$exports);
-  var module$version = {module$exports:"0.3.8"};
+  var module$version = {module$exports:"0.4.1"};
   module$version.module$exports && (module$version = module$version.module$exports);
-  var module$bootstrapper$player = {}, RendererController$$module$bootstrapper$player = module$renderer$renderer_controller, AssetController$$module$bootstrapper$player = module$asset$asset_controller, EventEmitter$$module$bootstrapper$player = module$event_emitter, tools$$module$bootstrapper$player = module$tools, URI$$module$bootstrapper$player = module$uri, version$$module$bootstrapper$player = module$version, player$$module$bootstrapper$player = {version:version$$module$bootstrapper$player, AssetController:AssetController$$module$bootstrapper$player, 
+  var module$bootstrapper$player = {}, EventEmitter$$module$bootstrapper$player = module$event_emitter, RendererController$$module$bootstrapper$player = module$renderer$renderer_controller, AssetController$$module$bootstrapper$player = module$asset$asset_controller, tools$$module$bootstrapper$player = module$tools, URI$$module$bootstrapper$player = module$uri, version$$module$bootstrapper$player = module$version, player$$module$bootstrapper$player = {version:version$$module$bootstrapper$player, AssetController:AssetController$$module$bootstrapper$player, 
   EventEmitter:EventEmitter$$module$bootstrapper$player, RendererController:RendererController$$module$bootstrapper$player, tools:tools$$module$bootstrapper$player, defaultRunnerOptions:{}, _addDefaultRunnerOptions:function(a) {
     var b = this.defaultRunnerOptions, c;
     for(c in b) {
@@ -4507,7 +4447,7 @@
       c[b] = e.resolveUri(a).toString()
     }));
     "function" === typeof d.code && (d.code = "(" + d.code.toString() + "());");
-    var f = new this.RunnerContext(this.runnerUrl, "undefined" === typeof document ? null : document, d.baseUrl), a = new this.Renderer(a, b, c, d.allowEventDefaults, d.fpsLog), b = new this.AssetController;
+    var f = new this.RunnerContext(this.runnerUrl, "undefined" === typeof document ? null : document, d.baseUrl), a = new this.Renderer(a, b, c, {allowEventDefaults:d.allowEventDefaults, fpsLog:d.fpsLog, disableContextMenu:d.disableContextMenu}), b = new this.AssetController;
     return new this.RendererController(a, b, f, d)
   }, run:function(a, b, c) {
     b && "string" != typeof b ? c = b : (c || (c = {}), c.url = b);
@@ -4530,21 +4470,31 @@
   }};
   module$bootstrapper$player.module$exports = player$$module$bootstrapper$player;
   module$bootstrapper$player.module$exports && (module$bootstrapper$player = module$bootstrapper$player.module$exports);
-  var module$bootstrapper$util = {}, version$$module$bootstrapper$util = module$version;
-  function reEscape$$module$bootstrapper$util(a) {
-    return a.replace(/[\\^$*+?.()|{}[\]]/g, "\\$1")
-  }
-  function filter$$module$bootstrapper$util(a, b, c) {
-    for(var d, e = [], f = 0, g = a.length;f < g;f += 1) {
-      d = a[f], b.call(c, d, f, a) && e.push(d)
+  var module$bootstrapper$util = {}, version$$module$bootstrapper$util = module$version, workerCode$$module$bootstrapper$util = "this.onmessage=function(e){postMessage(e.data)}", supportsWorkerWithDataUri$$module$bootstrapper$util = function() {
+    try {
+      var a = new Worker("data:application/javascript," + encodeURIComponent(workerCode$$module$bootstrapper$util));
+      a.onmessage = function() {
+        a.terminate()
+      };
+      a.postMessage("");
+      return!0
+    }catch(b) {
+      return!1
     }
-    return e
-  }
-  var reVersion$$module$bootstrapper$util = RegExp("\\b" + reEscape$$module$bootstrapper$util(version$$module$bootstrapper$util) + "\\b"), reTest$$module$bootstrapper$util = RegExp.prototype.test;
-  module$bootstrapper$util.module$exports = {chooseRunnerUrl:function(a, b) {
-    var a = filter$$module$bootstrapper$util(a, reTest$$module$bootstrapper$util, /(?:^|\/)bonsai.*\.js(?:$|\?|#)/i), c = 0, d = 0, e = filter$$module$bootstrapper$util(a, reTest$$module$bootstrapper$util, reVersion$$module$bootstrapper$util);
-    b && (c = filter$$module$bootstrapper$util(a, reTest$$module$bootstrapper$util, b), d = filter$$module$bootstrapper$util(e, reTest$$module$bootstrapper$util, b));
-    return d[0] || c[0] || e[0] || a[0]
+  }(), supportsWorkerWithBlobUri$$module$bootstrapper$util = function() {
+    var a, b, c, d;
+    try {
+      return a = new Blob([workerCode$$module$bootstrapper$util], {type:"text/javascript"}), c = window.URL || window.webkitURL, b = c.createObjectURL(a), d = new Worker(b), d.onmessage = function() {
+        d.terminate();
+        c.revokeObjectURL(b)
+      }, d.postMessage(""), !0
+    }catch(e) {
+      return b && c.revokeObjectURL(b), !1
+    }
+  }();
+  module$bootstrapper$util.module$exports = {getUrl:function(a) {
+    var b = window.URL || window.webkitURL, a = "(" + a + ")();";
+    return supportsWorkerWithBlobUri$$module$bootstrapper$util ? (a = new Blob([a], {type:"text/javascript"}), b.createObjectURL(a)) : supportsWorkerWithDataUri$$module$bootstrapper$util ? "data:application/javascript," + encodeURIComponent(a) : ""
   }};
   module$bootstrapper$util.module$exports && (module$bootstrapper$util = module$bootstrapper$util.module$exports);
   var module$runner$environment = {}, tools$$module$runner$environment = module$tools, EventEmitter$$module$runner$environment = module$event_emitter, Movie$$module$runner$environment = module$runner$movie, Point$$module$runner$environment = module$point, Path$$module$runner$environment = module$runner$path$path, SpecialAttrPath$$module$runner$environment = module$runner$path$special_attr_path, Rect$$module$runner$environment = module$runner$path$rect, Polygon$$module$runner$environment = module$runner$path$polygon, 
@@ -4563,7 +4513,8 @@
   }
   function Environment$$module$runner$environment(a, b) {
     var c = this.exports = {DOMElement:DOMElement$$module$runner$environment, DisplayObject:DisplayObject$$module$runner$environment, Group:Group$$module$runner$environment, Matrix:Matrix$$module$runner$environment, Text:Text$$module$runner$environment, TextSpan:TextSpan$$module$runner$environment, Path:Path$$module$runner$environment, SpecialAttrPath:SpecialAttrPath$$module$runner$environment, Rect:Rect$$module$runner$environment, Polygon:Polygon$$module$runner$environment, Star:Star$$module$runner$environment, 
-    Ellipse:Ellipse$$module$runner$environment, Circle:Circle$$module$runner$environment, Arc:Arc$$module$runner$environment, DisplayList:displayList$$module$runner$environment.DisplayList, Point:Point$$module$runner$environment, color:color$$module$runner$environment, tools:tools$$module$runner$environment, gradient:gradient$$module$runner$environment, easing:easing$$module$runner$environment, filter:filter$$module$runner$environment, stage:a, version:version$$module$runner$environment};
+    Ellipse:Ellipse$$module$runner$environment, Circle:Circle$$module$runner$environment, Arc:Arc$$module$runner$environment, DisplayList:displayList$$module$runner$environment.DisplayList, EventEmitter:EventEmitter$$module$runner$environment, Point:Point$$module$runner$environment, color:color$$module$runner$environment, tools:tools$$module$runner$environment, gradient:gradient$$module$runner$environment, easing:easing$$module$runner$environment, filter:filter$$module$runner$environment, stage:a, 
+    version:version$$module$runner$environment};
     this.assetLoader = b;
     c.Animation = bindConstructorToParameters$$module$runner$environment(Animation$$module$runner$environment, [a]);
     c.KeyframeAnimation = bindConstructorToParameters$$module$runner$environment(KeyframeAnimation$$module$runner$environment, [a]);
@@ -4612,10 +4563,10 @@
     this._isFrozen = !0;
     return this
   }, handleEvent:function(a) {
-    var b = a.command, a = a.data;
+    var b = a.command, c = a.data;
     switch(b) {
       case "options":
-        this.setOptions(a);
+        this.setOptions(c);
         break;
       case "play":
       ;
@@ -4624,25 +4575,25 @@
       case "freeze":
       ;
       case "unfreeze":
-        this[b](a);
+        this[b](c);
         break;
       case "assetLoadSuccess":
-        this.assetLoader.handleEvent("load", a.id, a.loadData);
+        this.assetLoader.handleEvent("load", c.id, c.loadData);
         break;
       case "assetLoadError":
-        this.assetLoader.handleEvent("error", a.id, a.loadData);
+        this.assetLoader.handleEvent("error", c.id, c.loadData);
         break;
       case "userevent":
-        if(b = a.targetId ? this.registry.displayObjects[a.targetId] : this) {
-          a = a.event, a.target = b, uiEvent$$module$runner$stage(a).emitOn(b)
+        if(a = c.targetId ? this.registry.displayObjects[c.targetId] : this) {
+          c = c.event, c.target = a, uiEvent$$module$runner$stage(c).emitOn(a)
         }
         break;
       case "env":
-        tools$$module$runner$stage.mixin(this.env.exports.env, a);
-        this.env.exports.env.emit("change", a);
+        tools$$module$runner$stage.mixin(this.env.exports.env, c);
+        this.env.exports.env.emit("change", c);
         break;
       case "message":
-        this.emit("message", a);
+        "category" in a ? this.emit("message:" + a.category, c) : this.emit("message", c);
         break;
       case "canRender":
         this._canRender = !0, this.postFrames()
@@ -4666,7 +4617,7 @@
     this.emitFrame();
     for(var a = this.registry, b = tools$$module$runner$stage.removeValueFromArray(a.movies.movies), c = [this], d, e, f = 0;f < d || f < (d = b.length);) {
       if(e = b[f]) {
-        e.emitFrame(), c.push(e)
+        e.isPlaying && c.push(e), e.emitFrame()
       }
       f += 1
     }
@@ -4706,8 +4657,8 @@
   }, postFrames:function() {
     var a = this._queuedFrames;
     this._canRender && a.length && (this._canRender = !1, this._queuedFramesById = {}, this._queuedFrames = [], this.post({command:"render", data:a, frame:this.currentFrame}))
-  }, sendMessage:function(a) {
-    return this.post({command:"message", data:a})
+  }, sendMessage:function(a, b) {
+    return 1 < arguments.length ? this.post({command:"message", category:a, data:b}) : this.post({command:"message", data:a})
   }, setFramerate:function(a) {
     if(a) {
       var b = this._isFrozen;
@@ -4734,6 +4685,66 @@
   delete proto$$module$runner$stage.markUpdate;
   module$runner$stage.module$exports = Stage$$module$runner$stage;
   module$runner$stage.module$exports && (module$runner$stage = module$runner$stage.module$exports);
+  var module$bootstrapper$context$iframe$bootstrap = {}, Stage$$module$bootstrapper$context$iframe$bootstrap = module$runner$stage, makeScriptLoader$$module$bootstrapper$context$iframe$bootstrap = module$bootstrapper$context$script_loader, tools$$module$bootstrapper$context$iframe$bootstrap = module$tools;
+  module$bootstrapper$context$iframe$bootstrap.module$exports = function(a, b) {
+    var c = b.document, d = makeScriptLoader$$module$bootstrapper$context$iframe$bootstrap(function(a, b) {
+      var d = c.createElement("script");
+      d.src = a;
+      d.onload = function() {
+        b(null)
+      };
+      d.onerror = function() {
+        b("Could not load: " + a)
+      };
+      c.documentElement.appendChild(d)
+    });
+    b.load = function(a, b) {
+      return d.load(a, b)
+    };
+    b.wait = function() {
+      return d.wait()
+    };
+    b.done = function() {
+      return d.done()
+    };
+    var e = new Stage$$module$bootstrapper$context$iframe$bootstrap(a), f = e.env.exports;
+    tools$$module$bootstrapper$context$iframe$bootstrap.mixin(b, f);
+    var g = b.exports = {};
+    e.loadSubMovie = function(a, b, d) {
+      var k = c.createElement("iframe");
+      c.documentElement.appendChild(k);
+      var l = k.contentWindow, m = d || new f.Movie, d = e.getSubMovieEnvironment(m, a);
+      l.document.open();
+      l.document.close();
+      tools$$module$bootstrapper$context$iframe$bootstrap.mixin(l, d.exports);
+      delete g.stage;
+      tools$$module$bootstrapper$context$iframe$bootstrap.mixin(l.bonsai, g);
+      tools$$module$bootstrapper$context$iframe$bootstrap.mixin(l, g);
+      l.stage = m;
+      m.root = this;
+      makeScriptLoader$$module$bootstrapper$context$iframe$bootstrap(function(a, b) {
+        var c = l.document.createElement("script");
+        c.src = a;
+        c.onload = function() {
+          b(null)
+        };
+        c.onerror = function() {
+          b("Could not load: " + a)
+        };
+        l.document.documentElement.appendChild(c)
+      }).load(e.assetBaseUrl.resolveUri(a), function(a) {
+        a ? b.call(m, a) : b.call(m, null, m)
+      })
+    };
+    a.on("message", function(c) {
+      "loadScript" === c.command ? d.load(c.url, function() {
+        a.notify({command:"scriptLoaded", url:c.url})
+      }) : "runScript" === c.command ? d.load("data:text/javascript," + encodeURIComponent(c.code)) : "exposePluginExports" === c.command && (delete g.stage, tools$$module$bootstrapper$context$iframe$bootstrap.mixin(f, g), tools$$module$bootstrapper$context$iframe$bootstrap.mixin(b, g))
+    });
+    e.unfreeze();
+    a.notifyRenderer({command:"isReady"})
+  };
+  module$bootstrapper$context$iframe$bootstrap.module$exports && (module$bootstrapper$context$iframe$bootstrap = module$bootstrapper$context$iframe$bootstrap.module$exports);
   var module$bootstrapper$context$worker$bootstrap = {}, Stage$$module$bootstrapper$context$worker$bootstrap = module$runner$stage, makeScriptLoader$$module$bootstrapper$context$worker$bootstrap = module$bootstrapper$context$script_loader, tools$$module$bootstrapper$context$worker$bootstrap = module$tools;
   function loadUrl$$module$bootstrapper$context$worker$bootstrap(a, b, c) {
     var d = new XMLHttpRequest;
@@ -4809,28 +4820,41 @@
     a.notifyRenderer({command:"isReady"})
   };
   module$bootstrapper$context$worker$bootstrap.module$exports && (module$bootstrapper$context$worker$bootstrap = module$bootstrapper$context$worker$bootstrap.module$exports);
-  var module$bootstrapper$_build$worker = {}, player$$module$bootstrapper$_build$worker = module$bootstrapper$player, MessageChannel$$module$bootstrapper$_build$worker = module$message_channel, bootstrapWorker$$module$bootstrapper$_build$worker = module$bootstrapper$context$worker$bootstrap, WorkerRunnerContext$$module$bootstrapper$_build$worker = module$bootstrapper$context$worker$context, SvgRenderer$$module$bootstrapper$_build$worker = module$renderer$svg$svg, tools$$module$bootstrapper$_build$worker = 
-  module$tools, bootstrapUtil$$module$bootstrapper$_build$worker = module$bootstrapper$util;
-  if("undefined" != typeof importScripts) {
-    var messageChannel$$module$bootstrapper$_build$worker, notifyRenderer$$module$bootstrapper$_build$worker = function(a) {
-      postMessage(a)
-    }, onMessage$$module$bootstrapper$_build$worker = function(a) {
-      messageChannel$$module$bootstrapper$_build$worker.notify(a.data)
-    }, disconnect$$module$bootstrapper$_build$worker = function() {
-      removeEventListener("message", onMessage$$module$bootstrapper$_build$worker);
-      messageChannel$$module$bootstrapper$_build$worker = null
-    };
-    messageChannel$$module$bootstrapper$_build$worker = new MessageChannel$$module$bootstrapper$_build$worker(notifyRenderer$$module$bootstrapper$_build$worker, disconnect$$module$bootstrapper$_build$worker);
-    addEventListener("message", onMessage$$module$bootstrapper$_build$worker);
-    bootstrapWorker$$module$bootstrapper$_build$worker(messageChannel$$module$bootstrapper$_build$worker)
+  var module$bootstrapper$_build$common = {}, player$$module$bootstrapper$_build$common = module$bootstrapper$player, MessageChannel$$module$bootstrapper$_build$common = module$message_channel, bootstrapIframe$$module$bootstrapper$_build$common = module$bootstrapper$context$iframe$bootstrap, IframeRunnerContext$$module$bootstrapper$_build$common = module$bootstrapper$context$iframe$context, bootstrapWorker$$module$bootstrapper$_build$common = module$bootstrapper$context$worker$bootstrap, WorkerRunnerContext$$module$bootstrapper$_build$common = 
+  module$bootstrapper$context$worker$context, SvgRenderer$$module$bootstrapper$_build$common = module$renderer$svg$svg, tools$$module$bootstrapper$_build$common = module$tools, bootstrapUtil$$module$bootstrapper$_build$common = module$bootstrapper$util;
+  if("undefined" != typeof window && window.messageChannel) {
+    setTimeout(function() {
+      var a = window.messageChannel;
+      delete window.messageChannel;
+      bootstrapIframe$$module$bootstrapper$_build$common(a, window)
+    }, 1)
   }else {
-    window.bonsai = player$$module$bootstrapper$_build$worker;
-    var scripts$$module$bootstrapper$_build$worker = tools$$module$bootstrapper$_build$worker.map(document.getElementsByTagName("script"), function(a) {
-      return a.src
-    });
-    player$$module$bootstrapper$_build$worker.Renderer = SvgRenderer$$module$bootstrapper$_build$worker;
-    player$$module$bootstrapper$_build$worker.setup({baseUrl:tools$$module$bootstrapper$_build$worker.baseUri(document), runnerContext:WorkerRunnerContext$$module$bootstrapper$_build$worker, runnerUrl:bootstrapUtil$$module$bootstrapper$_build$worker.chooseRunnerUrl(scripts$$module$bootstrapper$_build$worker) || "bonsai.js"})
+    if("undefined" != typeof importScripts) {
+      var messageChannel$$module$bootstrapper$_build$common, notifyRenderer$$module$bootstrapper$_build$common = function(a) {
+        postMessage(a)
+      }, onMessage$$module$bootstrapper$_build$common = function(a) {
+        messageChannel$$module$bootstrapper$_build$common.notify(a.data)
+      }, disconnect$$module$bootstrapper$_build$common = function() {
+        removeEventListener("message", onMessage$$module$bootstrapper$_build$common);
+        messageChannel$$module$bootstrapper$_build$common = null
+      };
+      messageChannel$$module$bootstrapper$_build$common = new MessageChannel$$module$bootstrapper$_build$common(notifyRenderer$$module$bootstrapper$_build$common, disconnect$$module$bootstrapper$_build$common);
+      addEventListener("message", onMessage$$module$bootstrapper$_build$common);
+      bootstrapWorker$$module$bootstrapper$_build$common(messageChannel$$module$bootstrapper$_build$common)
+    }else {
+      window.bonsai = player$$module$bootstrapper$_build$common;
+      var runnerUrl$$module$bootstrapper$_build$common = bootstrapUtil$$module$bootstrapper$_build$common.getUrl(__bonsaiRunnerCode__);
+      player$$module$bootstrapper$_build$common.Renderer = SvgRenderer$$module$bootstrapper$_build$common;
+      player$$module$bootstrapper$_build$common.IframeRunnerContext = IframeRunnerContext$$module$bootstrapper$_build$common;
+      player$$module$bootstrapper$_build$common.WorkerRunnerContext = WorkerRunnerContext$$module$bootstrapper$_build$common;
+      var originalPlayerRun$$module$bootstrapper$_build$common = player$$module$bootstrapper$_build$common.run;
+      player$$module$bootstrapper$_build$common.run = tools$$module$bootstrapper$_build$common.hitch(player$$module$bootstrapper$_build$common, function(a, b, c) {
+        player$$module$bootstrapper$_build$common.setup({baseUrl:player$$module$bootstrapper$_build$common._baseUrl || tools$$module$bootstrapper$_build$common.baseUri(document), runnerContext:player$$module$bootstrapper$_build$common.RunnerContext || (runnerUrl$$module$bootstrapper$_build$common ? WorkerRunnerContext$$module$bootstrapper$_build$common : IframeRunnerContext$$module$bootstrapper$_build$common), runnerUrl:player$$module$bootstrapper$_build$common.runnerUrl || runnerUrl$$module$bootstrapper$_build$common || 
+        "" + __bonsaiRunnerCode__});
+        return originalPlayerRun$$module$bootstrapper$_build$common.apply(player$$module$bootstrapper$_build$common, arguments)
+      })
+    }
   }
-  module$bootstrapper$_build$worker.module$exports && (module$bootstrapper$_build$worker = module$bootstrapper$_build$worker.module$exports)
+  module$bootstrapper$_build$common.module$exports && (module$bootstrapper$_build$common = module$bootstrapper$_build$common.module$exports)
 })();
 
